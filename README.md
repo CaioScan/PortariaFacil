@@ -1,6 +1,10 @@
 # Portaria Fácil — Checkpoint 01
 
-Documento para alinhamento do POD no Bootcamp Software Engineering Project, MBA em Engenharia de Software da Faculdade Impacta.
+Projeto do Grupo 6 no Bootcamp Software Engineering Project, MBA em Engenharia de Software da Faculdade Impacta.
+
+O Portaria Fácil propõe organizar o recebimento, o aviso ao morador e a retirada de encomendas em condomínios, com leitura assistida de etiquetas por IA e conferência humana.
+
+**Para o professor:** os documentos estão disponíveis nas [PR #1 — Organização do POD](https://github.com/CaioScan/PortariaFacil/pull/1) e [PR #2 — Produto](https://github.com/CaioScan/PortariaFacil/pull/2), abertas e aguardando revisão. O [PDF consolidado](https://github.com/CaioScan/PortariaFacil/blob/docs/checkpoint-01-produto/docs/produto/Portaria-Facil-Checkpoint-01.pdf) reúne a proposta escrita.
 
 **Marco:** PODs formados, repositório criado, problema escolhido.
 **Status:** Grupo 6 identificado; Caio confirmado como Tech Lead e endereço do repositório informado. Demais papéis e aprovação do tema ainda pendentes.
@@ -13,10 +17,10 @@ Nossa proposta é centralizar o registro, o aviso ao apartamento e a confirmaç�
 
 ## 2. POD e responsabilidades
 
-Nome do POD: **Grupo 6**. Três integrantes identificados na imagem enviada, conforme a composição prevista no slide 64.
+Nome do POD: **Grupo 6**, com três integrantes, conforme a composição prevista no slide 64.
 
 Encontro do grupo: [Google Meet](https://meet.google.com/oxt-gdda-arf).
-Tema proposto neste documento: **Portaria Fácil**. O campo Tema está em branco na imagem; a escolha ainda precisa ser ratificada pelo grupo.
+Tema proposto: **Portaria Fácil — gestão de encomendas em condomínios**. Ratificação pelo grupo ainda pendente.
 
 | Integrante | Papel | Usuário GitHub |
 | --- | --- | --- |
@@ -49,9 +53,10 @@ O relato inicial é uma evidência de contexto, não uma pesquisa concluída. Fr
 ## 4. Repositório
 
 Nome do repositório: **PortariaFacil**.
-URL do repositório: https://github.com/CaioScan/PortariaFacil.git
-URL do MVP: **ainda não publicada para o projeto acadêmico**.
-Usuário GitHub do professor: **[confirmar com o professor]**.
+
+- Repositório: [CaioScan/PortariaFacil](https://github.com/CaioScan/PortariaFacil).
+- URL do MVP: **ainda não publicada para o projeto acadêmico**.
+- Usuário GitHub do professor: **a informar para solicitação de revisão**.
 
 Endereço do repositório fornecido por Caio. O acesso dos integrantes e do professor, a proteção da main e os checks de CI ainda precisam ser confirmados.
 
@@ -77,14 +82,15 @@ Esta entrega está organizada em duas PRs de documentação, mantidas abertas pa
 
 ## 5. Material preparado
 
-- [Lean Canvas](docs/produto/lean-canvas.md)
-- [Hipótese de valor](docs/produto/hipotese.md)
-- [PRD v0 com seis pilares](docs/produto/prd-v0.md)
-- [AGENTS.md v0](AGENTS.md)
-- [Diário do checkpoint](docs/diario/checkpoint-01.md)
+- [Lean Canvas](https://github.com/CaioScan/PortariaFacil/blob/docs/checkpoint-01-produto/docs/produto/lean-canvas.md)
+- [Hipótese de valor](https://github.com/CaioScan/PortariaFacil/blob/docs/checkpoint-01-produto/docs/produto/hipotese.md)
+- [PRD v0 com seis pilares](https://github.com/CaioScan/PortariaFacil/blob/docs/checkpoint-01-produto/docs/produto/prd-v0.md)
+- [PDF consolidado](https://github.com/CaioScan/PortariaFacil/blob/docs/checkpoint-01-produto/docs/produto/Portaria-Facil-Checkpoint-01.pdf)
+- [AGENTS.md v0](https://github.com/CaioScan/PortariaFacil/blob/docs/checkpoint-01-organizacao/AGENTS.md)
+- [Diário do checkpoint](https://github.com/CaioScan/PortariaFacil/blob/docs/checkpoint-01-organizacao/docs/diario/checkpoint-01.md)
 - [PRs para revisão](https://github.com/CaioScan/PortariaFacil/pulls)
 
-Os documentos de produto e o PDF consolidado são entregues na PR de produto. Seus links estarão disponíveis na main após integração das duas PRs.
+Os links apontam para as branches das PRs e permitem consultar os materiais antes do merge. O PDF registra a proposta anterior à publicação; o estado atual da revisão deve ser consultado nas PRs.
 
 ## 6. Relação com o projeto existente
 
@@ -105,7 +111,8 @@ O curso também exige fluxo em URL pública em uma etapa posterior. A dependênc
 - [x] Registrar a URL do repositório informada por Caio.
 - [ ] Adicionar os integrantes e o professor com os acessos adequados.
 - [ ] Configurar proteção da main, revisão por outro integrante e exigência de CI, conforme slide 71; a configuração não foi executada nesta entrega.
-- [ ] Versionar os documentos, revisar e integrar as PRs.
+- [x] Publicar os documentos em duas PRs para revisão.
+- [ ] Revisar e integrar as PRs após aprovação humana.
 - [ ] Registrar a revisão humana no diário.
 - [ ] Criar a tag `checkpoint-01` no commit aprovado, dentro do prazo da aula.
 
