@@ -1,0 +1,30 @@
+services:
+  waha:
+    image: devlikeapro/waha:latest
+    ports:
+      - "127.0.0.1:3000:3000"
+    env_file:
+      - ${WAHA_CONFIG_DIR:-${LOCALAPPDATA}/WAHA-Estudos}/.env
+    volumes:
+      - sessions:/app/.sessions
+
+  bridge:
+    image: node:24-alpine
+    working_dir: /app
+    command: ["node", "bridge.mjs"]
+    env_file:
+      - ${WAHA_CONFIG_DIR:-${LOCALAPPDATA}/WAHA-Estudos}/bridge.env
+    volumes:
+      - ./bridge.mjs:/app/bridge.mjs:ro
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    user: node
+    restart: unless-stopped
+    depends_on:
+      - waha
+
+volumes:
+  sessions:
