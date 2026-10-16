@@ -1,0 +1,24 @@
+# Credenciais e configurações locais
+.env
+.env.*
+*.env
+!.env.example
+!*.env.example
+*-key.txt
+*token*.txt
+*.pem
+
+# Sessões autenticadas
+sessions/
+.sessions/
+WAHA-Estudos/
+
+# Registros e capturas locais
+*.log
+/waha/*.jpg
+/waha/*.jpeg
+/waha/*.png
+
+node_modules/
+.DS_Store
+Thumbs.db
