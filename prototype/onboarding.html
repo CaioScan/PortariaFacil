@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Onboarding — CondoBot</title>
+<style>
+  :root{
+    --bg:#0d1b1a; --panel:#12211f; --accent:#4fb0a4; --accent2:#e8b34d;
+    --text:#eaf3f1; --muted:#8fa8a4; --field:#173330; --border:#234845;
+    box-sizing:border-box; padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{margin:0; background:var(--bg); color:var(--text); font-family:'Segoe UI',system-ui,-apple-system,sans-serif;}
+  .wrap{max-width:520px; margin:0 auto; padding:28px 18px 60px;}
+
+  .hero{text-align:center; padding:20px 0 10px;}
+  .hero h1{font-size:1.6rem; line-height:1.3; margin:0 0 10px;}
+  .hero p{color:var(--muted); font-size:0.95rem; max-width:400px; margin:0 auto 22px;}
+  .cta{background:var(--accent); color:#08211d; border:none; padding:13px 28px; border-radius:10px; font-size:1rem; font-weight:600; cursor:pointer;}
+  .cta:hover{background:#66c2b6;}
+
+  .progress{display:flex; gap:6px; margin:24px 0;}
+  .progress .dot{flex:1; height:4px; border-radius:2px; background:var(--border);}
+  .progress .dot.done{background:var(--accent);}
+
+  .card{background:var(--panel); border:1px solid var(--border); border-radius:14px; padding:24px;}
+  .card h2{font-size:1.1rem; margin:0 0 4px;}
+  .card .step-label{color:var(--muted); font-size:0.78rem; margin-bottom:14px;}
+  label{display:block; font-size:0.82rem; color:var(--muted); margin:14px 0 6px;}
+  input, select, textarea{width:100%; background:var(--field); border:1px solid var(--border); border-radius:8px; padding:10px 12px; color:var(--text); font-size:0.9rem; font-family:inherit;}
+  input:focus, select:focus, textarea:focus{outline:2px solid var(--accent); outline-offset:1px; border-color:var(--accent);}
+  textarea{resize:vertical; min-height:70px;}
+  .connect-btn{width:100%; margin-top:6px; background:transparent; border:1px solid var(--accent); color:var(--accent); padding:11px; border-radius:8px; font-size:0.88rem; cursor:pointer;}
+  .connect-btn.connected{background:rgba(79,176,164,0.15); cursor:default;}
+  .nav-row{display:flex; justify-content:space-between; margin-top:24px; gap:10px;}
+  .btn-secondary{background:none; border:1px solid var(--border); color:var(--muted); padding:11px 18px; border-radius:8px; font-size:0.88rem; cursor:pointer;}
+  .btn-primary{background:var(--accent); border:none; color:#08211d; font-weight:600; padding:11px 22px; border-radius:8px; font-size:0.88rem; cursor:pointer; flex:1;}
+  .btn-primary:hover{background:#66c2b6;}
+  .area-row{display:flex; gap:8px; margin-top:8px;}
+  .area-row input{flex:1;}
+  .add-area{background:none; border:1px dashed var(--border); color:var(--muted); padding:8px; border-radius:8px; width:100%; margin-top:8px; cursor:pointer; font-size:0.82rem;}
+
+  .success{text-align:center; padding:20px 0;}
+  .success .icon{font-size:2.6rem; margin-bottom:10px;}
+  .success h2{margin:0 0 8px; font-size:1.25rem;}
+  .success p{color:var(--muted); font-size:0.9rem; max-width:360px; margin:0 auto 20px;}
+  .summary{text-align:left; background:var(--field); border-radius:10px; padding:14px 16px; font-size:0.85rem; line-height:1.7;}
+  .summary b{color:var(--accent);}
+
+  .hidden{display:none;}
+  .ai-box{background:rgba(79,176,164,0.08); border:1px solid var(--accent); border-radius:10px; padding:14px 14px 16px; margin-bottom:6px;}
+  .ai-note{margin-top:10px; font-size:0.8rem; color:var(--accent); background:rgba(79,176,164,0.12); padding:8px 10px; border-radius:8px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div id="landing" class="hero">
+    <h1>Menos WhatsApp pessoal, mais organização</h1>
+    <p>Configure o assistente do seu condomínio em 5 passos. Moradores resolvem sozinhos chamados, reservas e dúvidas — você recebe tudo organizado.</p>
+    <button class="cta" onclick="showStep(1)">Começar agora →</button>
+  </div>
+
+  <div id="wizard" class="hidden">
+    <div class="progress" id="progress"></div>
+
+    <div class="card step" data-step="1">
+      <div class="step-label">Passo 1 de 5</div>
+      <h2>Sobre o condomínio</h2>
+      <div id="aiBox" class="ai-box">
+        <label for="aiDesc" style="margin-top:0;">✨ Preenchimento assistido (opcional)</label>
+        <textarea id="aiDesc" placeholder="Conte em poucas frases: nome do condomínio, número de unidades, áreas comuns, regras principais, horário de silêncio..."></textarea>
+        <button class="connect-btn" id="aiFillBtn" onclick="fillWithAI()" type="button">Preencher com IA</button>
+        <div id="aiNote" class="ai-note hidden"></div>
+      </div>
+      <label for="nome">Nome do condomínio</label>
+      <input id="nome" type="text" placeholder="Ex: Residencial Bosque Verde">
+      <label for="unidades">Número de unidades</label>
+      <input id="unidades" type="text" placeholder="Ex: 120 apartamentos">
+      <label for="endereco">Endereço</label>
+      <input id="endereco" type="text" placeholder="Rua, número, bairro">
+    </div>
+
+    <div class="card step hidden" data-step="2">
+      <div class="step-label">Passo 2 de 5</div>
+      <h2>Conectar WhatsApp</h2>
+      <p style="color:var(--muted); font-size:0.85rem;">Autorize com um clique — os moradores vão falar com esse número.</p>
+      <button class="connect-btn" id="btnWhats" onclick="connectService('btnWhats','Conectado ✓')">Conectar número de WhatsApp</button>
+    </div>
+
+    <div class="card step hidden" data-step="3">
+      <div class="step-label">Passo 3 de 5</div>
+      <h2>Áreas comuns para reserva</h2>
+      <p style="color:var(--muted); font-size:0.85rem;">Isso alimenta o fluxo de reserva automática pros moradores.</p>
+      <div id="areas">
+        <div class="area-row">
+          <input type="text" placeholder="Área (ex: Salão de festas)">
+          <input type="text" placeholder="Capacidade/horário" style="max-width:150px;">
+        </div>
+      </div>
+      <button class="add-area" onclick="addAreaRow()">+ Adicionar área comum</button>
+    </div>
+
+    <div class="card step hidden" data-step="4">
+      <div class="step-label">Passo 4 de 5</div>
+      <h2>Regras e perguntas frequentes</h2>
+      <label for="silencio">Horário de silêncio</label>
+      <input id="silencio" type="text" placeholder="Ex: 22h às 8h">
+      <label for="visitantes">Regra para visitantes/prestadores</label>
+      <input id="visitantes" type="text" placeholder="Ex: cadastro prévio na portaria">
+      <label for="regras">Outras regras importantes</label>
+      <textarea id="regras" placeholder="Ex: animais de estimação com coleira nas áreas comuns"></textarea>
+    </div>
+
+    <div class="card step hidden" data-step="5">
+      <div class="step-label">Passo 5 de 5</div>
+      <h2>Conectar agenda de reservas</h2>
+      <p style="color:var(--muted); font-size:0.85rem;">Um clique para autorizar — evita conflito de horário nas áreas comuns.</p>
+      <button class="connect-btn" id="btnCal" onclick="connectService('btnCal','Conectado ✓')">Conectar Google Calendar</button>
+    </div>
+
+    <div class="nav-row">
+      <button class="btn-secondary" id="btnBack" onclick="prevStep()">Voltar</button>
+      <button class="btn-primary" id="btnNext" onclick="nextStep()">Continuar</button>
+    </div>
+  </div>
+
+  <div id="success" class="hidden success">
+    <div class="icon">✅</div>
+    <h2>O assistente do condomínio já está no ar</h2>
+    <p>Sem nenhuma etapa manual. 14 dias grátis para testar — a cobrança só começa depois disso.</p>
+    <div class="summary" id="summaryBox"></div>
+  </div>
+
+</div>
+
+<script>
+let current = 1;
+const total = 5;
+let areasPrefilled = false;
+let regrasPrefilled = false;
+
+function prefillAreas(){
+  if(areasPrefilled) return;
+  const wrap = document.getElementById('areas');
+  wrap.innerHTML = '';
+  [['Salão de festas','até 60 pessoas'], ['Churrasqueira','até 4h de uso'], ['Quadra','1h por reserva']].forEach(([nome,info]) => {
+    const row = document.createElement('div');
+    row.className = 'area-row';
+    row.innerHTML = `<input type="text" value="${nome}"><input type="text" value="${info}" style="max-width:150px;">`;
+    wrap.appendChild(row);
+  });
+  areasPrefilled = true;
+}
+function prefillRegras(){
+  if(regrasPrefilled) return;
+  document.getElementById('silencio').placeholder = 'Ex: 22h às 8h';
+  document.getElementById('visitantes').placeholder = 'Ex: cadastro prévio com nome e documento na portaria';
+  regrasPrefilled = true;
+}
+
+function renderProgress(){
+  const p = document.getElementById('progress');
+  p.innerHTML = '';
+  for(let i=1;i<=total;i++){
+    const d = document.createElement('div');
+    d.className = 'dot' + (i <= current ? ' done' : '');
+    p.appendChild(d);
+  }
+}
+function showStep(n){
+  document.getElementById('landing').classList.add('hidden');
+  document.getElementById('wizard').classList.remove('hidden');
+  document.querySelectorAll('.step').forEach(s => s.classList.add('hidden'));
+  document.querySelector(`.step[data-step="${n}"]`).classList.remove('hidden');
+  document.getElementById('btnBack').style.visibility = n === 1 ? 'hidden' : 'visible';
+  document.getElementById('btnNext').textContent = n === total ? 'Concluir cadastro' : 'Continuar';
+  current = n;
+  renderProgress();
+  if(n === 3) prefillAreas();
+  if(n === 4) prefillRegras();
+}
+function nextStep(){ if(current < total){ showStep(current + 1); } else { finish(); } }
+function prevStep(){ if(current > 1) showStep(current - 1); }
+function connectService(btnId, label){
+  const btn = document.getElementById(btnId);
+  btn.textContent = label;
+  btn.classList.add('connected');
+}
+function addAreaRow(){
+  const wrap = document.getElementById('areas');
+  const row = document.createElement('div');
+  row.className = 'area-row';
+  row.innerHTML = `<input type="text" placeholder="Área comum"><input type="text" placeholder="Capacidade/horário" style="max-width:150px;">`;
+  wrap.appendChild(row);
+}
+function finish(){
+  const nome = document.getElementById('nome').value || 'seu condomínio';
+  const unidades = document.getElementById('unidades').value || '(não informado)';
+  const endereco = document.getElementById('endereco').value || '(não informado)';
+  document.getElementById('wizard').classList.add('hidden');
+  document.getElementById('success').classList.remove('hidden');
+  document.getElementById('summaryBox').innerHTML =
+    `<b>Condomínio:</b> ${nome}<br><b>Unidades:</b> ${unidades}<br><b>Endereço:</b> ${endereco}<br><b>WhatsApp:</b> conectado<br><b>Agenda:</b> conectada`;
+}
+
+function showAiNote(msg){
+  const note = document.getElementById('aiNote');
+  note.textContent = msg;
+  note.classList.remove('hidden');
+}
+async function fillWithAI(){
+  const desc = document.getElementById('aiDesc').value.trim();
+  if(!desc){ showAiNote('Escreva uma breve descrição do condomínio primeiro.'); return; }
+  const btn = document.getElementById('aiFillBtn');
+  btn.disabled = true; btn.textContent = 'Preenchendo...';
+  try {
+    const sample = await claude.use('sample');
+    if(!sample){ showAiNote('Preenchimento por IA indisponível aqui — preencha manualmente abaixo.'); return; }
+    const prompt = `Você ajuda síndicos a preencher o cadastro de um assistente de WhatsApp para condomínios.
+Com base na descrição livre do usuário, responda APENAS com um JSON válido, sem texto extra, no formato:
+{"nome":"string","unidades":"string","endereco":"string","areas":[{"nome":"string","info":"capacidade ou horário como string"}],"silencio":"string","visitantes":"string","regras":"string"}
+Se alguma informação não foi mencionada, sugira algo razoável e genérico para um condomínio residencial (não invente endereço).
+Descrição do usuário: "${desc}"`;
+    const data = await sample.json(prompt);
+    document.getElementById('nome').value = data.nome || '';
+    document.getElementById('unidades').value = data.unidades || '';
+    document.getElementById('endereco').value = data.endereco || '';
+    const wrap = document.getElementById('areas');
+    wrap.innerHTML = '';
+    const areasList = (data.areas && data.areas.length) ? data.areas : [{nome:'Salão de festas', info:'até 60 pessoas'}];
+    areasList.forEach(a => {
+      const row = document.createElement('div');
+      row.className = 'area-row';
+      row.innerHTML = `<input type="text" value="${a.nome || ''}"><input type="text" value="${a.info || ''}" style="max-width:150px;">`;
+      wrap.appendChild(row);
+    });
+    areasPrefilled = true;
+    document.getElementById('silencio').value = data.silencio || '';
+    document.getElementById('visitantes').value = data.visitantes || '';
+    document.getElementById('regras').value = data.regras || '';
+    regrasPrefilled = true;
+    showAiNote('Preenchido pela IA — revise cada passo antes de concluir.');
+  } catch (err) {
+    console.error('Erro no preenchimento assistido:', err);
+    showAiNote('Não consegui preencher agora. Preencha manualmente abaixo.');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Preencher com IA';
+  }
+}
+(async () => {
+  const sample = await claude.use('sample');
+  if(!sample){ document.getElementById('aiBox').classList.add('hidden'); }
+})();
+
+renderProgress();
+</script>
+</body>
+</html>
