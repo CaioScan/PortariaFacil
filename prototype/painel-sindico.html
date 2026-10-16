@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>CondoBot — Painel do síndico</title>
+<style>
+:root{--bg:#f2f6f5;--panel:#fff;--field:#e6efed;--border:#cddcd9;--text:#0f2a27;--muted:#5b7773;--accent:#1f7a6f;--accent-ink:#fff;--warn:#a9740f;--danger:#b8452a;--ok:#1f7a6f;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0d1b1a;--panel:#12211f;--field:#173330;--border:#234845;--text:#eaf3f1;--muted:#8fa8a4;--accent:#4fb0a4;--accent-ink:#08211d;--warn:#e8b34d;--danger:#e07856;--ok:#4fb0a4}}
+:root[data-theme="dark"]{--bg:#0d1b1a;--panel:#12211f;--field:#173330;--border:#234845;--text:#eaf3f1;--muted:#8fa8a4;--accent:#4fb0a4;--accent-ink:#08211d;--warn:#e8b34d;--danger:#e07856;--ok:#4fb0a4}
+*{box-sizing:border-box}html{scroll-padding-top:env(safe-area-inset-top,0px)}html,body{height:auto}
+body{margin:0;background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,-apple-system,sans-serif;font-size:15px;line-height:1.45}
+.wrap{max-width:1080px;margin:0 auto;padding:22px 16px 60px}
+header{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap;margin-bottom:18px}
+h1{font-size:1.5rem;margin:0}header p{margin:2px 0 0;color:var(--muted);font-size:.88rem}
+button{font:inherit;cursor:pointer}button:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.btn{background:var(--accent);color:var(--accent-ink);border:0;border-radius:8px;padding:7px 13px;font-weight:600;font-size:.85rem}
+.ghost{background:none;border:1px solid var(--border);color:var(--muted);border-radius:8px;padding:7px 13px;font-size:.85rem}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:16px}
+.kpi{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:12px 14px}
+.kpi b{display:block;font-size:1.7rem;line-height:1.1}.kpi span{color:var(--muted);font-size:.8rem}
+.kpi.alert b{color:var(--danger)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px}
+section{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:16px}
+section.wide{grid-column:1/-1}
+h2{font-size:1rem;margin:0 0 2px}.sub{color:var(--muted);font-size:.8rem;margin:0 0 12px}
+.row{background:var(--field);border-radius:9px;padding:9px 11px;margin-bottom:7px;border-left:3px solid var(--accent);font-size:.86rem}
+.row.novo,.row.late{border-left-color:var(--danger)}.row.andamento,.row.pend{border-left-color:var(--warn)}
+.row .top{display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap}
+.meta{color:var(--muted);font-size:.76rem}
+select,textarea{background:var(--panel);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:5px 8px;font:inherit;font-size:.8rem}
+textarea{width:100%;min-height:54px;resize:vertical}
+.tag{font-size:.7rem;padding:2px 8px;border-radius:10px;background:var(--panel);color:var(--accent);border:1px solid var(--border)}
+.tag.warn{color:var(--warn)}
+.acts{display:flex;gap:8px;margin-top:7px}
+.tabs{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap}
+.tabs button{background:none;border:1px solid var(--border);color:var(--muted);border-radius:16px;padding:4px 11px;font-size:.78rem}
+.tabs button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.empty{color:var(--muted);font-style:italic;font-size:.82rem}
+.bars{display:grid;gap:7px}.bar{display:grid;grid-template-columns:110px 1fr 28px;gap:8px;align-items:center;font-size:.8rem}
+.bar i{display:block;height:9px;border-radius:5px;background:var(--accent)}
+.charts{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:14px}
+.chart{background:var(--field);border-radius:10px;padding:12px}
+.chart h3{font-size:.85rem;margin:0 0 8px}
+.pie{display:flex;gap:14px;align-items:center;flex-wrap:wrap}.pie svg{width:150px;height:150px;flex:none;filter:drop-shadow(0 3px 6px rgba(0,0,0,.18))}
+.sl{transition:transform .18s;transform-origin:60px 60px;cursor:default}.sl:hover{transform:scale(1.045)}
+.pc{fill:#fff;font-size:8.5px;font-weight:700;paint-order:stroke;stroke:rgba(0,0,0,.5);stroke-width:2.2px;stroke-linejoin:round;pointer-events:none}
+.tot{fill:var(--text);font-size:19px;font-weight:700}.totl{fill:var(--muted);font-size:7.5px}
+.legend{list-style:none;margin:0;padding:0;font-size:.78rem;display:grid;gap:5px;flex:1;min-width:120px}
+.legend li{display:flex;align-items:center;gap:7px;background:var(--panel);border-radius:7px;padding:4px 8px}
+.legend li span{flex:1}.legend i{width:10px;height:10px;border-radius:3px;flex:none}
+@media (prefers-reduced-motion:reduce){.sl{transition:none}}
+.col svg{width:100%;height:120px;display:block}.col text{fill:var(--muted);font-size:9px}
+.note{color:var(--muted);font-size:.74rem;margin-top:18px;text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div><h1>Painel do síndico</h1><p>Residencial Bosque Verde · tudo o que chega pelo WhatsApp, organizado em um lugar</p></div>
+  <button class="ghost" id="reset">Restaurar dados de exemplo</button>
+</header>
+
+<div class="kpis" id="kpis"></div>
+
+<div class="grid">
+  <section class="wide">
+    <h2>Precisa da sua atenção</h2>
+    <p class="sub">Itens que dependem de uma decisão sua agora</p>
+    <div id="atencao"></div>
+  </section>
+
+  <section>
+    <h2>Chamados de manutenção</h2>
+    <p class="sub">Abertos pelos moradores no WhatsApp. Atualize o status conforme a equipe resolve.</p>
+    <div class="tabs" id="tabsCh"></div>
+    <div id="chamados"></div>
+  </section>
+
+  <section>
+    <h2>Reservas de áreas comuns</h2>
+    <p class="sub">Confirmadas pelo bot e sincronizadas com a agenda</p>
+    <div id="reservas"></div>
+  </section>
+
+  <section>
+    <h2>Encomendas na portaria</h2>
+    <p class="sub">Etiqueta lida por IA e conferida pelo porteiro antes do registro</p>
+    <div id="encomendas"></div>
+  </section>
+
+  <section>
+    <h2>Avisos aos moradores</h2>
+    <p class="sub">Avisos da portaria e da segurança esperam sua aprovação antes de sair</p>
+    <div id="pendentes"></div>
+    <textarea id="novoAviso" placeholder="Escreva um aviso..." aria-label="Novo aviso"></textarea>
+    <div class="acts">
+      <select id="destino" aria-label="Destino do aviso"><option>Todos os moradores</option><option>Bloco A</option><option>Bloco B</option></select>
+      <button class="btn" id="enviarAviso">Enviar aviso</button>
+    </div>
+    <p class="sub" style="margin-top:14px">Enviados</p>
+    <div id="enviados"></div>
+  </section>
+
+  <section class="wide">
+    <h2>Métricas do condomínio</h2>
+    <p class="sub">Panorama de chamados, reservas e encomendas</p>
+    <div class="charts" id="charts"></div>
+  </section>
+
+  <section>
+    <h2>Chamados por tipo</h2>
+    <p class="sub">Onde estão os problemas mais frequentes</p>
+    <div class="bars" id="bars"></div>
+  </section>
+
+  <section>
+    <h2>Mural interno da equipe</h2>
+    <p class="sub">Recados entre síndico, portaria e segurança. Moradores não veem.</p>
+    <textarea id="novoRecado" placeholder="Escreva um recado para a equipe..." aria-label="Novo recado"></textarea>
+    <div class="acts"><button class="btn" id="postar">Postar no mural</button></div>
+    <div id="mural" style="margin-top:10px"></div>
+  </section>
+</div>
+<p class="note">Dados de exemplo para demonstração. As alterações ficam só nesta página e voltam ao padrão ao recarregar.</p>
+</div>
+
+<script>
+const seed=()=>({
+ chamados:[
+  {id:1001,tipo:'Elevador com defeito',local:'Bloco A',quem:'Apto 52',quando:'hoje, 08:10',status:'novo'},
+  {id:1002,tipo:'Vazamento',local:'Bloco B',quem:'Apto 32',quando:'ontem, 19:40',status:'andamento'},
+  {id:1003,tipo:'Iluminação da garagem',local:'Garagem G1',quem:'Apto 11',quando:'há 3 dias',status:'resolvido'},
+  {id:1004,tipo:'Vazamento',local:'Bloco A',quem:'Apto 21',quando:'há 4 dias',status:'resolvido'}],
+ reservas:[
+  {local:'Salão de festas',quando:'sábado, 14h às 18h',quem:'Apto 51'},
+  {local:'Churrasqueira',quando:'domingo, 12h às 16h',quem:'Apto 12'},
+  {local:'Quadra',quando:'domingo, 9h às 10h',quem:'Apto 83'}],
+ encomendas:[
+  {apto:'Apto 31',origem:'Mercado Livre',dias:3,status:'aguardando',ia:true},
+  {apto:'Apto 74',origem:'Amazon',dias:1,status:'aguardando',ia:true},
+  {apto:'Apto 22',origem:'Correios',dias:0,status:'aguardando',ia:false},
+  {apto:'Apto 45',origem:'Shopee',dias:2,status:'retirada',ia:true}],
+ pendentes:[
+  {autor:'Portaria',destino:'Todos os moradores',texto:'Entrega de gás amanhã entre 9h e 11h. Portão de serviço será aberto.'}],
+ avisos:[{autor:'Síndico',destino:'Todos os moradores',texto:'Manutenção do elevador social nesta quinta, das 9h às 12h.'}],
+ mural:[{autor:'Segurança',texto:'Troca de turno 22h: nenhuma ocorrência pendente.'}],
+ conversas:[{quem:'Apto 63',texto:'Quer falar diretamente com o síndico sobre barulho no andar de cima.'}],
+ semanas:[['S1',3],['S2',5],['S3',2],['S4',6],['S5',4],['S6',4]],
+ bot:[38,9,3],
+ boleto:{inad:4,mes:'R$ 480,00',venc:'dia 10'}
+});
+function pie(d){
+ const t=d.reduce((x,y)=>x+y[1],0);
+ if(!t)return '<div class="empty">Sem dados ainda.</div>';
+ const C=60,R=56,r=30,M=43,pt=(a,k)=>[(C+k*Math.cos(a)).toFixed(2),(C+k*Math.sin(a)).toFixed(2)];
+ let a0=-Math.PI/2,p='';
+ const vis=d.filter(x=>x[1]>0);
+ vis.forEach(([n,v,c])=>{
+  const pc=Math.round(v/t*100),a1=a0+v/t*2*Math.PI,tip=`<title>${esc(n)}: ${v} (${pc}%)</title>`;
+  if(vis.length===1){p+=`<g class="sl"><circle cx="${C}" cy="${C}" r="${M}" fill="none" stroke="${c}" stroke-width="${R-r}">${tip}</circle><text x="${C}" y="${C-14}" class="pc" text-anchor="middle">${pc}%</text></g>`;}
+  else{
+   const l=a1-a0>Math.PI?1:0,o0=pt(a0,R),o1=pt(a1,R),i1=pt(a1,r),i0=pt(a0,r),m=pt((a0+a1)/2,M);
+   p+=`<g class="sl"><path d="M${o0}A${R} ${R} 0 ${l} 1 ${o1}L${i1}A${r} ${r} 0 ${l} 0 ${i0}Z" fill="${c}" stroke="var(--field)" stroke-width="2.5" stroke-linejoin="round">${tip}</path>${pc>=7?`<text x="${m[0]}" y="${m[1]}" class="pc" text-anchor="middle" dominant-baseline="central">${pc}%</text>`:''}</g>`;}
+  a0=a1;});
+ return `<div class="pie"><svg viewBox="0 0 120 120" role="img" aria-label="Gráfico de rosca">${p}<text x="${C}" y="${C-1}" class="tot" text-anchor="middle" dominant-baseline="central">${t}</text><text x="${C}" y="${C+13}" class="totl" text-anchor="middle">total</text></svg><ul class="legend">${d.map(([n,v,c])=>`<li><i style="background:${c}"></i><span>${esc(n)}</span><b>${v}</b></li>`).join('')}</ul></div>`;
+}
+let S=seed(),filtro='abertos';
+const $=id=>document.getElementById(id);
+const esc=t=>String(t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const stLabel={novo:'Novo',andamento:'Em andamento',resolvido:'Resolvido'};
+
+function render(){
+ const abertos=S.chamados.filter(c=>c.status!=='resolvido');
+ const aguard=S.encomendas.filter(e=>e.status==='aguardando');
+ const atrasadas=aguard.filter(e=>e.dias>=3);
+ $('kpis').innerHTML=
+  `<div class="kpi ${S.chamados.some(c=>c.status==='novo')?'alert':''}"><b>${abertos.length}</b><span>chamados abertos (${S.chamados.filter(c=>c.status==='novo').length} sem triagem)</span></div>
+   <div class="kpi"><b>${S.reservas.length}</b><span>reservas na semana</span></div>
+   <div class="kpi ${atrasadas.length?'alert':''}"><b>${aguard.length}</b><span>encomendas aguardando retirada</span></div>
+   <div class="kpi"><b>${S.pendentes.length}</b><span>avisos para aprovar</span></div>
+   <div class="kpi"><b>${S.boleto.inad}%</b><span>inadimplência · boleto ${S.boleto.mes} vence ${S.boleto.venc}</span></div>`;
+
+ const at=[];
+ S.chamados.filter(c=>c.status==='novo').forEach(c=>at.push(`<div class="row novo"><b>Chamado #${c.id}: ${esc(c.tipo)}</b><div class="meta">${esc(c.quem)} · ${esc(c.local)} · aguardando triagem. Defina o status no quadro de chamados.</div></div>`));
+ S.pendentes.forEach(p=>at.push(`<div class="row pend"><b>Aviso da ${esc(p.autor.toLowerCase())} aguardando aprovação</b><div class="meta">${esc(p.texto)}</div></div>`));
+ atrasadas.forEach(e=>at.push(`<div class="row late"><b>Encomenda parada há ${e.dias} dias: ${esc(e.apto)}</b><div class="meta">${esc(e.origem)}. Peça à portaria para reforçar o aviso ao morador.</div></div>`));
+ S.conversas.forEach((c,i)=>at.push(`<div class="row pend"><div class="top"><b>${esc(c.quem)} pediu para falar com você</b><button class="ghost" onclick="S.conversas.splice(${i},1);render()">Marcar como respondido</button></div><div class="meta">${esc(c.texto)}</div></div>`));
+ $('atencao').innerHTML=at.join('')||'<div class="empty">Nada pendente. Tudo em dia.</div>';
+
+ $('tabsCh').innerHTML=[['abertos','Abertos'],['resolvidos','Resolvidos'],['todos','Todos']].map(([k,l])=>`<button aria-pressed="${filtro===k}" onclick="filtro='${k}';render()">${l}</button>`).join('');
+ const lista=S.chamados.filter(c=>filtro==='todos'||(filtro==='abertos')===(c.status!=='resolvido'));
+ $('chamados').innerHTML=lista.map(c=>`<div class="row ${c.status}"><div class="top"><b>#${c.id} · ${esc(c.tipo)}</b>
+  <select aria-label="Status do chamado ${c.id}" onchange="setSt(${c.id},this.value)">${Object.keys(stLabel).map(k=>`<option value="${k}" ${k===c.status?'selected':''}>${stLabel[k]}</option>`).join('')}</select></div>
+  <div class="meta">${esc(c.quem)} · ${esc(c.local)} · ${esc(c.quando)}</div></div>`).join('')||'<div class="empty">Nenhum chamado nesta lista.</div>';
+
+ $('reservas').innerHTML=S.reservas.map(r=>`<div class="row"><b>${esc(r.local)}</b><div class="meta">${esc(r.quando)} · ${esc(r.quem)} · confirmado</div></div>`).join('')||'<div class="empty">Sem reservas.</div>';
+
+ $('encomendas').innerHTML=S.encomendas.map((e,i)=>`<div class="row ${e.status==='retirada'?'':e.dias>=3?'late':'pend'}"><div class="top"><b>${esc(e.apto)} · ${esc(e.origem)}</b>
+  <span>${e.ia?'<span class="tag">etiqueta lida por IA</span> ':'<span class="tag warn">digitada pelo porteiro</span> '}${e.status==='retirada'?'<span class="tag">retirada</span>':''}</span></div>
+  <div class="meta">${e.status==='retirada'?'Retirada confirmada com assinatura':e.dias===0?'Chegou hoje':'Na portaria há '+e.dias+' dia(s)'}</div></div>`).join('');
+
+ $('pendentes').innerHTML=S.pendentes.map((p,i)=>`<div class="row pend"><div class="meta">${esc(p.autor)} → ${esc(p.destino)}</div>${esc(p.texto)}
+  <div class="acts"><button class="btn" onclick="aprova(${i})">Aprovar e enviar</button><button class="ghost" onclick="S.pendentes.splice(${i},1);render()">Recusar</button></div></div>`).join('')||'<div class="empty">Nenhum aviso pendente.</div>';
+ $('enviados').innerHTML=S.avisos.slice().reverse().map(a=>`<div class="row"><div class="meta">${esc(a.autor)} → ${esc(a.destino)}</div>${esc(a.texto)}</div>`).join('');
+
+ const tipos={};S.chamados.forEach(c=>tipos[c.tipo]=(tipos[c.tipo]||0)+1);
+ const mx=Math.max(...Object.values(tipos),1);
+ $('bars').innerHTML=Object.entries(tipos).map(([t,n])=>`<div class="bar"><span>${esc(t)}</span><div><i style="width:${n/mx*100}%"></i></div><b>${n}</b></div>`).join('');
+
+ const cs=n=>S.chamados.filter(c=>c.status===n).length;
+ const ag=S.encomendas.filter(e=>e.status==='aguardando');
+ const porArea={};S.reservas.forEach(r=>porArea[r.local]=(porArea[r.local]||0)+1);
+ const cores=['var(--accent)','var(--warn)','var(--danger)','#5b8def','var(--muted)'];
+ const sem=S.semanas,smx=Math.max(...sem.map(s=>s[1]),1);
+ $('charts').innerHTML=
+  `<div class="chart"><h3>Chamados por status</h3>${pie([['Novo',cs('novo'),'var(--danger)'],['Em andamento',cs('andamento'),'var(--warn)'],['Resolvido',cs('resolvido'),'var(--accent)']])}</div>
+   <div class="chart"><h3>Reservas por área</h3>${pie(Object.entries(porArea).map(([k,v],i)=>[k,v,cores[i%5]]))}</div>
+   <div class="chart"><h3>Encomendas</h3>${pie([['Retiradas',S.encomendas.filter(e=>e.status==='retirada').length,'var(--accent)'],['Aguardando até 2 dias',ag.filter(e=>e.dias<3).length,'var(--warn)'],['Paradas há 3+ dias',ag.filter(e=>e.dias>=3).length,'var(--danger)']])}</div>
+   <div class="chart"><h3>Chamados por semana</h3><div class="col"><svg viewBox="0 0 ${sem.length*40} 120" role="img" aria-label="Chamados abertos por semana">${sem.map((s,i)=>{const h=s[1]/smx*80;return `<rect x="${i*40+9}" y="${95-h}" width="22" height="${h}" rx="3" fill="var(--accent)"/><text x="${i*40+20}" y="${90-h}" text-anchor="middle">${s[1]}</text><text x="${i*40+20}" y="112" text-anchor="middle">${s[0]}</text>`}).join('')}</svg></div></div>
+   <div class="chart"><h3>Atendimento do bot</h3>${pie([['Resolvido sem humano',S.bot[0],'var(--accent)'],['Encaminhado à portaria',S.bot[1],'var(--warn)'],['Pediu o síndico',S.bot[2],'var(--danger)']])}</div>`;
+
+ $('mural').innerHTML=S.mural.slice().reverse().map(m=>`<div class="row"><div class="meta">${esc(m.autor)}</div>${esc(m.texto)}</div>`).join('');
+}
+function setSt(id,v){S.chamados.find(c=>c.id===id).status=v;render()}
+function aprova(i){const p=S.pendentes.splice(i,1)[0];S.avisos.push(p);render()}
+$('enviarAviso').onclick=()=>{const t=$('novoAviso').value.trim();if(!t)return;S.avisos.push({autor:'Síndico',destino:$('destino').value,texto:t});$('novoAviso').value='';render()};
+$('postar').onclick=()=>{const t=$('novoRecado').value.trim();if(!t)return;S.mural.push({autor:'Síndico',texto:t});$('novoRecado').value='';render()};
+$('reset').onclick=()=>{S=seed();render()};
+render();
+</script>
+</body>
+</html>
