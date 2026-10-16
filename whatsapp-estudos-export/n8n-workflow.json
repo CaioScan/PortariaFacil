@@ -1,0 +1,143 @@
+{
+  "name": "WhatsApp - WAHA e Groq",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "waha-estudos-groq",
+        "authentication": "headerAuth",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "e9b77cb5-f841-4cf7-84b3-c86d332a9292",
+      "name": "Entrada WAHA",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "f3767778-610b-458c-8f41-6858e9027b62"
+    },
+    {
+      "parameters": {
+        "jsCode": "const text = $json.body?.text;\nif (typeof text !== 'string' || !text.trim() || text.length > 2000) {\n  throw new Error('Texto inválido: use entre 1 e 2000 caracteres.');\n}\nreturn [{ json: { chatInput: text.trim() } }];"
+      },
+      "id": "bda01a48-13da-4877-a54b-7983eb966d90",
+      "name": "Validar texto",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.chatInput }}",
+        "messages": {
+          "messageValues": [
+            {
+              "message": "Você é um assistente de estudos. Responda em português do Brasil, de forma clara e curta. Não inicie suas respostas com !ia."
+            }
+          ]
+        }
+      },
+      "id": "7cf16637-acd5-47a6-a2b6-ad476bcd6b12",
+      "name": "Resposta Groq",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "position": [
+        440,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "model": "openai/gpt-oss-20b",
+        "options": {
+          "temperature": 0.4
+        }
+      },
+      "id": "e0a938bd-6291-48e3-adba-62c6649c176f",
+      "name": "Groq Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        440,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { reply: $json.text } }}",
+        "options": {}
+      },
+      "id": "be6b32c7-4a99-4b83-99b3-9003fa539076",
+      "name": "Devolver resposta",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        760,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Entrada WAHA": {
+      "main": [
+        [
+          {
+            "node": "Validar texto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validar texto": {
+      "main": [
+        [
+          {
+            "node": "Resposta Groq",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Resposta Groq",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resposta Groq": {
+      "main": [
+        [
+          {
+            "node": "Devolver resposta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataSuccessExecution": "none",
+    "saveDataErrorExecution": "none",
+    "saveManualExecutions": false
+  },
+  "pinData": {},
+  "tags": []
+}
