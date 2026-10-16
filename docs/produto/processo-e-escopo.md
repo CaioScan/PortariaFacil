@@ -150,7 +150,7 @@ Pendências: nome Portaria Fácil/CondoBot; demais papéis do POD; mecanismo de 
 
 ## 13. Referências e evidências
 
-Arquivos analisados: `CondoBot — Painel do síndico.html`, `Demo_ CondoBot — Morador + Síndico.html`, `Onboarding — CondoBot.html` e `Painel de Comunicação — CondoBot.html`. São referências fornecidas pelo proponente; não foram publicados nesta alteração.
+Arquivos analisados: `CondoBot — Painel do síndico.html`, `Demo_ CondoBot — Morador + Síndico.html`, `Onboarding — CondoBot.html` e `Painel de Comunicação — CondoBot.html`. Foram publicados em [prototype/](../../prototype/README.md) com nomes simplificados e conteúdo preservado. O índice explica como visualizar cada demo.
 
 O painel e a conversa usam dados de exemplo em memória. O onboarding simula conexões e depende de ambiente específico para preenchimento por IA. Não foram apresentadas evidências de validação com usuários.
 
