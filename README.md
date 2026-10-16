@@ -9,6 +9,8 @@ O Portaria Fácil propõe organizar o recebimento, o aviso ao morador e a retira
 **Marco:** PODs formados, repositório criado, problema escolhido.
 **Status:** Grupo 6 identificado; Caio confirmado como Tech Lead e endereço do repositório informado. Demais papéis e aprovação do tema ainda pendentes.
 
+**Atualização técnica:** o estudo de integração WhatsApp com **WAHA + n8n + Groq** foi incorporado à main pela [PR #3](https://github.com/CaioScan/PortariaFacil/pull/3). Veja o [fluxo e a configuração](#9-integração-whatsapp--waha--n8n).
+
 ## 1. Proposta para apresentação
 
 O Portaria Fácil pretende melhorar o recebimento e a retirada de encomendas em condomínios. Hoje, no cenário relatado, o porteiro anota a chegada em um caderno, tenta avisar pelo interfone e coleta a assinatura na retirada. Quando o morador está fora, o aviso pode não chegar e depende de uma nova tentativa do porteiro.
@@ -78,7 +80,7 @@ src/
 .github/
 ```
 
-Esta entrega está organizada em duas PRs de documentação, mantidas abertas para revisão humana: organização do POD e proposta de produto. Este README foi publicado na main para apresentar o projeto ao professor; os demais documentos permanecem nas branches das PRs até a revisão. As regras iniciais do agente estão no `AGENTS.md` da PR de organização.
+Os documentos acadêmicos estão organizados em duas PRs mantidas abertas para revisão humana: organização do POD e proposta de produto. Este README e o estudo WAHA da PR #3 já estão na main. Os documentos das PRs #1 e #2 permanecem nas respectivas branches até a revisão. As regras iniciais do agente estão no `AGENTS.md` da PR de organização.
 
 ## 5. Material preparado
 
@@ -129,3 +131,56 @@ Fonte: **Bootcamp · Software Engineering Project — Aula 01 (1).pdf**, Prof. M
 | 72, 83–84 | Entregáveis detalhados do checkpoint 01 |
 
 O slide 8 é o resumo do marco. O detalhamento dos slides 72 e 84 inclui os documentos de produto preparados aqui. O AI Canvas completo e o PRD v1 pertencem ao checkpoint 02.
+
+## 9. Integração WhatsApp — WAHA + n8n
+
+O estudo em [`whatsapp-estudos-export/`](whatsapp-estudos-export/) implementa uma ponte para receber comandos do WhatsApp via WAHA, processá-los em um workflow n8n com Groq e devolver a resposta à conversa autorizada. A PR #3 foi integrada em 16/10/2026 por solicitação do autor.
+
+### Fluxo implementado
+
+```mermaid
+flowchart LR
+    Morador["Conversa de teste: !ia texto"] --> WAHA["WAHA: evento message.any"]
+    WAHA --> Ponte["Ponte Node.js: autentica e filtra"]
+    Ponte --> N8N["n8n: webhook HTTPS e validação"]
+    N8N --> Groq["Groq: gera resposta"]
+    Groq --> Resposta["n8n: JSON com reply"]
+    Resposta --> Envio["Ponte: envia pelo WAHA"]
+    Envio --> WhatsApp["Resposta no WhatsApp"]
+```
+
+| Componente | Responsabilidade |
+| --- | --- |
+| WAHA | Vincula a sessão WhatsApp, emite eventos e disponibiliza o envio de texto. |
+| Ponte Node.js | Valida o segredo do webhook, seleciona comandos `!ia`, filtra origem e horário, limita chamadas e encaminha apenas o texto ao n8n. |
+| n8n | Recebe o texto por webhook com Header Auth, valida a entrada, executa a cadeia de IA e responde com JSON. |
+| Groq | Fornece o modelo de linguagem utilizado pelo workflow. |
+
+Por padrão, o bot está desativado e, quando habilitado sem grupo configurado, aceita comandos somente na conversa consigo mesmo. `TEST_GROUP_ID` permite autorizar explicitamente um grupo de teste. Exemplo de comando: `!ia explique o que é uma API`.
+
+### Arquivos e instalação
+
+- [Guia completo de instalação e operação](whatsapp-estudos-export/waha/README.md).
+- [Workflow n8n para importar](whatsapp-estudos-export/n8n-workflow.json).
+- [Docker Compose do WAHA e da ponte](whatsapp-estudos-export/waha/compose.yaml).
+- [Exemplo das variáveis de configuração](whatsapp-estudos-export/waha/bridge.env.example).
+- [Código da ponte](whatsapp-estudos-export/waha/bridge.mjs) e [testes](whatsapp-estudos-export/waha/bridge.test.mjs).
+
+1. Preparar Docker com containers Linux e a configuração privada conforme o guia.
+2. Importar `n8n-workflow.json` no n8n. O arquivo vem desativado e sem credenciais.
+3. Configurar Header Auth no webhook (`X-Study-Key`) e a credencial Groq no nó do modelo. Conferir a disponibilidade do modelo na conta antes do teste.
+4. Configurar na ponte a URL HTTPS do webhook publicado, as chaves independentes e o destino de teste.
+5. Vincular a sessão `default` do WAHA por QR Code e configurar o evento `message.any` para `http://bridge:3001/events`, com `X-Relay-Key`.
+6. Após conferir a configuração, habilitar `BOT_ENABLED=true` e testar no destino autorizado, seguindo o guia.
+
+Credenciais e sessões ficam fora dos arquivos versionados. O Compose publica o WAHA apenas em `127.0.0.1:3000`; a ponte usa a rede interna do Docker. Se o backend do protótipo também usar a porta 3000, será necessário resolver esse conflito antes de executar ambos no mesmo computador.
+
+### Estado da validação e relação com o Portaria Fácil
+
+- Cinco testes automatizados da seleção de comandos passaram, e a sintaxe da ponte foi verificada.
+- O JSON do workflow, as referências entre nós e a validação de entrada foram conferidos localmente.
+- A integração ponta a ponta com serviços ativos ainda não foi validada nesta publicação; não foram enviadas mensagens durante o commit ou merge.
+- O estudo ainda não está conectado ao cadastro de encomendas, à aprovação do morador ou ao botão de reaviso do Portaria Fácil. Essa ligação é uma etapa futura.
+- O uso de IA aqui é para respostas ao comando de estudos; a leitura de etiquetas proposta no produto continua pendente.
+
+Os limites de chamadas e a deduplicação da ponte ficam em memória e reiniciam com o processo. WAHA é a tecnologia utilizada neste estudo; o documento de referência `WHATSAPP_BUSINESS_MCP.md` trata de outra integração e não indica que a Cloud API oficial tenha sido implementada.
