@@ -1,13 +1,13 @@
-# Portaria Fácil — Checkpoint 01
+# Portaria Fácil — Encomendas e chamados pelo WhatsApp
 
 Projeto do Grupo 6 no Bootcamp Software Engineering Project, MBA em Engenharia de Software da Faculdade Impacta.
 
-O Portaria Fácil propõe organizar o recebimento, o aviso ao morador e a retirada de encomendas em condomínios, com leitura assistida de etiquetas por IA e conferência humana.
+O Portaria Fácil propõe centralizar avisos de encomendas e abertura/acompanhamento de chamados pelo WhatsApp, com painel web para portaria e síndico. A IA auxilia a estruturar relatos e pedir informações faltantes, com confirmação humana.
 
-**Para o professor:** os documentos estão disponíveis nas [PR #1 — Organização do POD](https://github.com/CaioScan/PortariaFacil/pull/1) e [PR #2 — Produto](https://github.com/CaioScan/PortariaFacil/pull/2), abertas e aguardando revisão. O [PDF consolidado](https://github.com/CaioScan/PortariaFacil/blob/docs/checkpoint-01-produto/docs/produto/Portaria-Facil-Checkpoint-01.pdf) reúne a proposta escrita.
+**Para o professor:** a [PR #2 — Produto e demos](https://github.com/CaioScan/PortariaFacil/pull/2) foi integrada à main por solicitação do autor. Consulte o [processo e escopo do MVP](docs/produto/processo-e-escopo.md) e os [quatro demos](prototype/README.md). A [PR #1 — Organização do POD](https://github.com/CaioScan/PortariaFacil/pull/1) permanece aberta para revisão. Merge não representa aprovação acadêmica.
 
 **Marco:** PODs formados, repositório criado, problema escolhido.
-**Status:** Grupo 6 identificado; Caio confirmado como Tech Lead e endereço do repositório informado. Demais papéis e aprovação do tema ainda pendentes.
+**Status:** processo, escopo, documentos de produto, quatro demos HTML e estudo WAHA/n8n disponíveis na main. A implementação integrada dos fluxos e a validação com usuários continuam pendentes, assim como os demais papéis do POD e a ratificação do tema.
 
 **Atualização técnica:** o estudo de integração WhatsApp com **WAHA + n8n + Groq** foi incorporado à main pela [PR #3](https://github.com/CaioScan/PortariaFacil/pull/3). Veja o [fluxo e a configuração](#9-integração-whatsapp--waha--n8n).
 
@@ -15,14 +15,19 @@ O Portaria Fácil propõe organizar o recebimento, o aviso ao morador e a retira
 
 O Portaria Fácil pretende melhorar o recebimento e a retirada de encomendas em condomínios. Hoje, no cenário relatado, o porteiro anota a chegada em um caderno, tenta avisar pelo interfone e coleta a assinatura na retirada. Quando o morador está fora, o aviso pode não chegar e depende de uma nova tentativa do porteiro.
 
-Nossa proposta é centralizar o registro, o aviso ao apartamento e a confirmação da retirada. Para adequar a proposta ao desafio de IA da disciplina, propomos investigar a leitura de etiquetas por imagem: a IA sugere os dados da encomenda e o porteiro confere antes de registrar. A hipótese é reduzir o trabalho de transcrição e as falhas de comunicação sem retirar a responsabilidade humana pela conferência.
+Além das encomendas, relatos de vazamentos, iluminação defeituosa e outros problemas podem ficar dispersos em conversas, sem protocolo, responsável ou retorno. A proposta reúne dois processos:
+
+- **Encomendas:** portaria registra a chegada, seleciona destinatário aprovado, solicita aviso pelo WhatsApp e confirma a retirada com recebedor e data/hora.
+- **Chamados:** morador relata o problema pelo WhatsApp, confere descrição/local e sugestão de resumo/categoria, confirma a abertura e acompanha o protocolo até resolução ou reabertura.
+
+A IA é proposta para estruturar os relatos de chamados, com alternativa guiada e confirmação humana. Avisos de encomendas usam mensagens padronizadas. A leitura de etiquetas fica para evolução futura.
 
 ## 2. POD e responsabilidades
 
 Nome do POD: **Grupo 6**, com três integrantes, conforme a composição prevista no slide 64.
 
 Encontro do grupo: [Google Meet](https://meet.google.com/oxt-gdda-arf).
-Tema proposto: **Portaria Fácil — gestão de encomendas em condomínios**. Ratificação pelo grupo ainda pendente.
+Tema proposto: **Portaria Fácil — comunicação e atendimento condominial pelo WhatsApp**. Os demos usam a marca CondoBot; nome definitivo e ratificação pelo grupo ainda pendentes.
 
 | Integrante | Papel | Usuário GitHub |
 | --- | --- | --- |
@@ -42,13 +47,13 @@ Todos participam das decisões, operam o agente e revisam PRs. Em aula, o trabal
 
 ## 3. Problema escolhido — proposta para ratificação
 
-**Como reduzir o esforço de registrar encomendas e garantir que o morador possa tomar conhecimento da chegada, mesmo ausente, mantendo um histórico confiável da retirada?**
+**Como avisar o morador sobre encomendas, mesmo ausente, e transformar relatos de problemas do prédio em chamados com protocolo, responsável e acompanhamento até a conclusão?**
 
 Públicos envolvidos:
 
 - Porteiro: registra a chegada, avisa e entrega a encomenda.
-- Morador: precisa saber que a encomenda chegou e acompanhar a retirada.
-- Síndico ou administrador: organiza os acessos e acompanha os registros.
+- Morador: recebe avisos, relata problemas e consulta seus chamados.
+- Síndico ou administrador: organiza acessos, faz triagem e acompanha responsáveis e resolução.
 
 O relato inicial é uma evidência de contexto, não uma pesquisa concluída. Frequência do problema, volume de encomendas, tempo gasto e disposição de pagamento ainda precisam ser validados.
 
@@ -80,27 +85,29 @@ src/
 .github/
 ```
 
-Os documentos acadêmicos estão organizados em duas PRs mantidas abertas para revisão humana: organização do POD e proposta de produto. Este README e o estudo WAHA da PR #3 já estão na main. Os documentos das PRs #1 e #2 permanecem nas respectivas branches até a revisão. As regras iniciais do agente estão no `AGENTS.md` da PR de organização.
+As PRs #2 (produto/demos) e #3 (estudo WAHA) foram integradas à main. A PR #1 (organização) permanece aberta; seus arquivos de regras do agente e diário ainda estão na branch de organização. A árvore acima é a estrutura acadêmica prevista, não uma afirmação de que todas as pastas já foram implementadas.
 
 ## 5. Material preparado
 
-- [Lean Canvas](https://github.com/CaioScan/PortariaFacil/blob/docs/checkpoint-01-produto/docs/produto/lean-canvas.md)
-- [Hipótese de valor](https://github.com/CaioScan/PortariaFacil/blob/docs/checkpoint-01-produto/docs/produto/hipotese.md)
-- [PRD v0 com seis pilares](https://github.com/CaioScan/PortariaFacil/blob/docs/checkpoint-01-produto/docs/produto/prd-v0.md)
-- [PDF consolidado](https://github.com/CaioScan/PortariaFacil/blob/docs/checkpoint-01-produto/docs/produto/Portaria-Facil-Checkpoint-01.pdf)
+- [Processo, problema e escopo do MVP](docs/produto/processo-e-escopo.md)
+- [Lean Canvas](docs/produto/lean-canvas.md)
+- [Hipótese de valor](docs/produto/hipotese.md)
+- [PRD v0 com seis pilares](docs/produto/prd-v0.md)
+- [Quatro demos e instruções para visualizar](prototype/README.md)
+- [PDF histórico do checkpoint 01](docs/produto/Portaria-Facil-Checkpoint-01.pdf)
 - [AGENTS.md v0](https://github.com/CaioScan/PortariaFacil/blob/docs/checkpoint-01-organizacao/AGENTS.md)
 - [Diário do checkpoint](https://github.com/CaioScan/PortariaFacil/blob/docs/checkpoint-01-organizacao/docs/diario/checkpoint-01.md)
 - [PRs para revisão](https://github.com/CaioScan/PortariaFacil/pulls)
 
-Os links apontam para as branches das PRs e permitem consultar os materiais antes do merge. O PDF registra a proposta anterior à publicação; o estado atual da revisão deve ser consultado nas PRs.
+Os documentos de produto e demos são acessíveis na main. AGENTS.md e diário ainda apontam para a PR #1. O PDF registra a proposta anterior e não incorpora o escopo ampliado; os Markdown definem a proposta atual.
 
 ## 6. Relação com o projeto existente
 
 Existe um protótipo anterior do Portaria Fácil, com painel web e app de morador em .NET MAUI. Ele é uma referência de aprendizado; o grupo precisa alinhar com o professor as condições de reaproveitamento. Não deve ser apresentado como código desenvolvido durante o bootcamp.
 
-O fluxo de aviso discutido até aqui usa consulta periódica e popup no app aberto quando muda a versão da notificação. Isso não comprova entrega de push com o app fechado. A leitura de etiquetas por IA é uma proposta nova, ainda sem implementação ou validação.
+O protótipo anterior usa consulta periódica e popup no app aberto, sem comprovação de push com app fechado. O novo MVP prioriza WhatsApp como canal do morador e painel web para gestão; instalar aplicativo próprio não é requisito.
 
-O curso também exige fluxo em URL pública em uma etapa posterior. A dependência exclusiva de instalação de APK precisa ser avaliada no checkpoint de produto.
+O curso exige demonstração em URL pública. Os HTMLs publicados são simulações, não uma implantação do fluxo integrado de atendimento.
 
 ## 7. Decisões necessárias para fechar hoje
 
@@ -114,7 +121,8 @@ O curso também exige fluxo em URL pública em uma etapa posterior. A dependênc
 - [ ] Adicionar os integrantes e o professor com os acessos adequados.
 - [ ] Configurar proteção da main, revisão por outro integrante e exigência de CI, conforme slide 71; a configuração não foi executada nesta entrega.
 - [x] Publicar os documentos em duas PRs para revisão.
-- [ ] Revisar e integrar as PRs após aprovação humana.
+- [x] Integrar a PR #2 de produto/demos e a PR #3 de WAHA por solicitação do autor.
+- [ ] Revisar e concluir a PR #1 de organização.
 - [ ] Registrar a revisão humana no diário.
 - [ ] Criar a tag `checkpoint-01` no commit aprovado, dentro do prazo da aula.
 
@@ -180,7 +188,22 @@ Credenciais e sessões ficam fora dos arquivos versionados. O Compose publica o 
 - Cinco testes automatizados da seleção de comandos passaram, e a sintaxe da ponte foi verificada.
 - O JSON do workflow, as referências entre nós e a validação de entrada foram conferidos localmente.
 - A integração ponta a ponta com serviços ativos ainda não foi validada nesta publicação; não foram enviadas mensagens durante o commit ou merge.
-- O estudo ainda não está conectado ao cadastro de encomendas, à aprovação do morador ou ao botão de reaviso do Portaria Fácil. Essa ligação é uma etapa futura.
-- O uso de IA aqui é para respostas ao comando de estudos; a leitura de etiquetas proposta no produto continua pendente.
+- O estudo ainda não está conectado ao cadastro de encomendas, ao reaviso ou à abertura/consulta persistente de chamados. Essas ligações são etapas futuras.
+- O uso de IA implementado no estudo responde a comandos; resumo/categoria e coleta de dados para chamados ainda precisam ser adaptados e avaliados.
 
 Os limites de chamadas e a deduplicação da ponte ficam em memória e reiniciam com o processo. WAHA é a tecnologia utilizada neste estudo; o documento de referência `WHATSAPP_BUSINESS_MCP.md` trata de outra integração e não indica que a Cloud API oficial tenha sido implementada.
+
+## 10. Demos e limites do MVP
+
+| Demo | Referência |
+| --- | --- |
+| Painel do síndico | [Chamados, encomendas e visão de gestão](prototype/painel-sindico.html) |
+| Morador + Síndico | [Conversa simulada e atualização do painel](prototype/demo-morador-sindico.html) |
+| Onboarding | [Cadastro e configuração inicial](prototype/onboarding.html) |
+| Painel de Comunicação | [Avisos, aprovação e mural](prototype/painel-comunicacao.html) |
+
+O GitHub mostra o código dos HTMLs. Para interagir, baixe os arquivos e abra no navegador, conforme o [guia dos demos](prototype/README.md). Os dados e conexões são simulados; o preenchimento assistido do onboarding depende do ambiente original.
+
+O MVP inclui vínculos aprovados/número verificado, encomendas e avisos rastreáveis, retirada confirmada, chamados com confirmação/protocolo, responsável, andamento, resolução/reabertura, histórico e permissões. Falha de envio não apaga registros e aceite pelo provedor não comprova leitura.
+
+Reservas, financeiro, agenda, mural, comunicação coletiva e leitura de etiquetas ficam para evolução. Foto no chamado é desejável. O [processo completo](docs/produto/processo-e-escopo.md) contém priorização, 12 histórias com critérios de aceite, métricas e decisões ainda pendentes.
