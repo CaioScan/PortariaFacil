@@ -1,19 +1,21 @@
 # Hipótese de valor
 
-**Acreditamos que um fluxo de recebimento com leitura assistida de etiquetas, conferência pelo porteiro e aviso digital ao apartamento, para condomínios que utilizam caderno e interfone, reduzirá o esforço de registro e a dependência de novos avisos manuais. Saberemos que a hipótese ganha suporte quando o tempo mediano de registro cair pelo menos 30% no teste comparativo, sem aumento de encaminhamentos ao apartamento incorreto, e moradores conseguirem identificar a chegada sem contato adicional do porteiro.**
+**Acreditamos que avisar pelo WhatsApp o destinatário aprovado após registrar uma encomenda reduzirá novas tentativas manuais de contato e facilitará a retirada, inclusive quando o morador estiver fora. Também acreditamos que transformar relatos em chamados confirmados, com protocolo, responsável e atualizações, reduzirá solicitações perdidas e facilitará acompanhar a resolução.**
 
-A meta de 30% é uma proposta para o teste, não um resultado alcançado. O POD deverá confirmá-la após medir a situação atual.
+Mediremos falhas de envio, contatos manuais, tempo de retirada, completude dos chamados, tempo de triagem/resolução e reaberturas. Metas operacionais serão definidas após linha de base; não há resultados medidos. Detalhamento em [Processo e escopo](processo-e-escopo.md).
+
+A hipótese da IA é reduzir esforço de abertura/triagem sugerindo resumo/categoria e pedindo dados faltantes. Compararemos com preenchimento guiado. Meta inicial para revisão do POD: pelo menos 80% de categoria aceitável e resumo fiel em avaliações separadas; nenhum caso pode inventar fatos ou expor dados de terceiros.
 
 ## Teste futuro proposto
 
 - Entrevistar inicialmente um porteiro, um síndico e dois moradores sobre episódios concretos; participantes ainda não recrutados.
-- Medir o fluxo atual e o proposto com o mesmo conjunto de 20 etiquetas fictícias ou autorizadas, alternando a ordem para reduzir o efeito de aprendizagem.
-- Medir o tempo desde o início da leitura até o registro confirmado, incluindo correções humanas.
-- Comparar sugestões de destinatário e apartamento com os valores esperados. Registrar separadamente erros da IA, correções e registros finais incorretos.
-- Simular a chegada de uma encomenda enquanto o morador está fora da unidade, mas com acesso ao canal digital escolhido. Verificar se ele identifica a chegada sem novo contato da portaria.
+- Testar os demos com pelo menos dois usuários e registrar dificuldades observadas.
+- Comparar abertura guiada e assistida com os mesmos cenários, alternando a ordem para reduzir aprendizagem.
+- Avaliar a IA em 10–20 relatos comuns, incompletos/ambíguos e adversariais, com respostas esperadas e correções humanas registradas.
+- Simular encomenda com morador ausente, falha de WhatsApp, reaviso e retirada; testar chamado, confirmação, responsável, resolução, reabertura e acesso indevido.
 
 O estudo inicial serve para aprendizado e não prova confiabilidade em escala. Disponibilizar um aviso, exibir um popup e confirmar que o morador leu são eventos diferentes e devem ser medidos separadamente.
 
 ## Motivos para revisar a proposta
 
-Se a conferência das sugestões consumir o ganho de tempo, o uso de IA deverá ser revisto. Se o morador não adotar o canal, o aviso digital não resolverá a falha de comunicação. Se o registro duplicar o trabalho do caderno, será necessário ajustar o fluxo operacional.
+Se a conferência das sugestões consumir o ganho de tempo, rever a IA. Se o morador não adotar o canal ou sua operação não atender ao piloto, rever a comunicação. Se houver trabalho duplicado com o caderno ou chamados que a equipe não consegue assumir, ajustar o processo. O software não garante prazo de resolução sem capacidade operacional.

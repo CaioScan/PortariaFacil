@@ -1,18 +1,18 @@
 # Lean Canvas — Portaria Fácil
 
-Versão 0.1, proposta do checkpoint 01. Os itens de mercado e resultado são hipóteses, não conclusões de pesquisa.
+Proposta revisada na PR #2. Os itens de mercado e resultado são hipóteses. O [processo e escopo](processo-e-escopo.md) relaciona problemas, entregas e demos.
 
 | Bloco | Proposta |
 | --- | --- |
-| Problemas | Aviso por interfone não alcança o morador ausente; novo aviso depende da memória do porteiro; registros manuais exigem transcrição e dificultam consultas sobre recebimento e retirada. |
+| Problemas | Interfone não alcança o morador ausente; reavisos/retiradas dependem de registros manuais; problemas do prédio ficam em conversas dispersas sem protocolo, responsável e acompanhamento. |
 | Segmentos de clientes | Condomínios residenciais com portaria e registro manual. Possível comprador: síndico ou administradora. Usuários: porteiros e moradores. |
 | Primeiros adeptos | Um condomínio com acesso ao POD e disposição para participar de entrevistas e teste controlado. Ainda não confirmado. |
-| Proposta única de valor | Da etiqueta ao aviso: recebimento assistido por IA, conferido pela portaria, com acompanhamento da encomenda até a retirada. |
-| Solução proposta | Sugestão de dados a partir da etiqueta; confirmação pelo porteiro; registro vinculado ao apartamento; aviso e consulta pelo morador; registro de retirada. |
+| Proposta única de valor | Encomendas e chamados pelo WhatsApp, com registros rastreáveis e gestão no painel do síndico. |
+| Solução proposta | Vínculo aprovado; aviso ao destinatário e retirada registrada; relatos estruturados com apoio de IA, confirmação, protocolo, responsável e atualizações. |
 | Canais | Contato com síndicos, demonstração para administradoras e indicação entre condomínios. Hipóteses a validar. |
 | Receitas | Assinatura por condomínio, com faixa por volume ou quantidade de unidades a avaliar. Não há preço validado. |
 | Custos | Hospedagem, armazenamento, processamento de imagens por IA, comunicação, suporte e manutenção. Valores ainda não estimados. |
-| Métricas-chave | Tempo entre início do registro e confirmação; correções das sugestões da IA; avisos disponibilizados e efetivamente vistos; retiradas com registro completo. |
+| Métricas-chave | Falhas de aviso, contatos manuais, tempo de retirada, completude e tempo de triagem dos chamados, correções da IA e resolução. |
 | Vantagem injusta | Ainda não demonstrada. Acesso a uma operação real pode ajudar a aprender, mas não constitui barreira competitiva comprovada. |
 
 ## Alternativas atuais
@@ -21,6 +21,6 @@ Caderno, interfone, recados presenciais e grupos de mensagens são alternativas 
 
 ## Papel da IA a validar
 
-A proposta acadêmica concentra a IA na interpretação de etiquetas com formatos variados, sugerindo destinatário, apartamento e transportadora. A gravação só ocorre após conferência humana; informação ausente ou ambígua exige confirmação, sem inferir um apartamento arbitrariamente.
+A proposta concentra a IA em resumo/categoria de relatos e coleta de informações faltantes. O solicitante confirma antes de abrir o chamado; o síndico decide prioridade e encaminhamento. Avisos de encomenda usam mensagens padronizadas. Leitura de etiquetas é evolução futura.
 
-O produto básico de registro e aviso funciona sem IA. Portanto, a contribuição da IA ainda precisa ser provada: a proposta será fraca para o desafio da disciplina se a leitura assistida não reduzir esforço de forma relevante ou se uma extração simples resolver igualmente bem. Essa decisão deverá ser revisada no discovery e no AI Canvas do checkpoint 02.
+O benefício será comparado ao preenchimento guiado, incluindo tempo e correções humanas. Os demos CondoBot representam painel, conversa, onboarding e comunicação; reservas, financeiro e comunicação coletiva permanecem fora do MVP inicial. Discovery e AI Canvas precisam validar essa priorização.
