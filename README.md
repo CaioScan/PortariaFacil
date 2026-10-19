@@ -32,7 +32,7 @@ Tema proposto: **Portaria Fácil — comunicação e atendimento condominial pel
 | Integrante | Papel | Usuário GitHub |
 | --- | --- | --- |
 | Caio Scandiuzzi Valente Coimbra | Tech Lead | CaioScan |
-| Aldenir Rodrigues Almeida | A definir pelo grupo | A informar |
+| Aldenir Rodrigues Almeida | Product Owner | A informar |
 | Renildo da Silva Santos Junior | A definir pelo grupo | A informar |
 
 Responsabilidades dos papéis; Product Owner e Quality & Ops ainda a distribuir:
