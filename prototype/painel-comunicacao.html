@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>CondoBot — Painel de Comunicação</title>
+<style>
+  :root{
+    --bg:#0d1b1a; --panel:#12211f; --accent:#4fb0a4; --accent2:#e8b34d; --danger:#e07856;
+    --text:#eaf3f1; --muted:#8fa8a4; --field:#173330; --border:#234845;
+    box-sizing:border-box; padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+  }
+  *{box-sizing:border-box;} html,body{height:100%;}
+  body{margin:0; background:var(--bg); color:var(--text); font-family:'Segoe UI',system-ui,-apple-system,sans-serif; padding:22px 14px 50px;}
+  .wrap{max-width:640px; margin:0 auto;}
+  h1{font-size:1.2rem; margin:0 0 4px; text-align:center;}
+  p.sub{text-align:center; color:var(--muted); font-size:0.82rem; margin:0 0 20px;}
+
+  .role-switch{display:flex; gap:6px; justify-content:center; margin-bottom:22px; flex-wrap:wrap;}
+  .role-btn{background:var(--panel); border:1px solid var(--border); color:var(--muted); padding:8px 14px; border-radius:20px; font-size:0.8rem; cursor:pointer;}
+  .role-btn.active{background:var(--accent); color:#08211d; border-color:var(--accent); font-weight:600;}
+
+  .card{background:var(--panel); border:1px solid var(--border); border-radius:14px; padding:18px; margin-bottom:16px;}
+  .card h2{font-size:0.98rem; margin:0 0 4px;}
+  .card .card-sub{font-size:0.78rem; color:var(--muted); margin:0 0 14px;}
+
+  .compose textarea{width:100%; background:var(--field); border:1px solid var(--border); border-radius:8px; padding:10px; color:var(--text); font-size:0.85rem; font-family:inherit; resize:vertical; min-height:60px;}
+  .compose select{background:var(--field); border:1px solid var(--border); border-radius:8px; padding:8px 10px; color:var(--text); font-size:0.82rem; margin-top:8px;}
+  .compose-actions{display:flex; gap:8px; margin-top:10px;}
+  .btn{background:var(--accent); border:none; color:#08211d; font-weight:600; padding:9px 16px; border-radius:8px; font-size:0.82rem; cursor:pointer;}
+  .btn:hover{background:#66c2b6;}
+  .btn-outline{background:none; border:1px solid var(--muted); color:var(--muted); padding:9px 16px; border-radius:8px; font-size:0.82rem; cursor:pointer;}
+
+  .item{background:var(--field); border-radius:10px; padding:10px 12px; margin-bottom:8px; font-size:0.84rem; border-left:3px solid var(--accent);}
+  .item.pendente{border-left-color:var(--accent2);}
+  .item .meta{font-size:0.72rem; color:var(--muted); margin-bottom:4px;}
+  .item .actions{margin-top:8px; display:flex; gap:8px;}
+  .tag{display:inline-block; font-size:0.68rem; padding:2px 8px; border-radius:10px; background:rgba(79,176,164,0.15); color:var(--accent); margin-left:6px;}
+  .tag.warn{background:rgba(232,179,77,0.15); color:var(--accent2);}
+  .empty{color:var(--muted); font-size:0.8rem; font-style:italic;}
+  .restricted{text-align:center; padding:20px; color:var(--muted); font-size:0.85rem;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Painel de Comunicação — Residencial Bosque Verde</h1>
+  <p class="sub">Troque de papel para ver o que cada um pode fazer.</p>
+
+  <div class="role-switch" id="roleSwitch"></div>
+
+  <!-- Avisos para moradores -->
+  <div class="card">
+    <h2>📢 Avisos para moradores</h2>
+    <div class="card-sub" id="avisoSub"></div>
+    <div id="composeAviso" class="compose hidden">
+      <textarea id="avisoTexto" placeholder="Escreva o aviso..."></textarea>
+      <select id="avisoDestino">
+        <option>Todos os moradores</option>
+        <option>Bloco A</option>
+        <option>Bloco B</option>
+      </select>
+      <div class="compose-actions">
+        <button class="btn" id="avisoBtn" onclick="enviarAviso()">Enviar</button>
+      </div>
+    </div>
+    <div id="listaAvisos"></div>
+  </div>
+
+  <!-- Pendentes de aprovação (só síndico vê) -->
+  <div class="card hidden" id="cardPendentes">
+    <h2>⏳ Pendentes de aprovação</h2>
+    <div class="card-sub">Avisos enviados pela portaria/segurança aguardando sua liberação</div>
+    <div id="listaPendentes"></div>
+  </div>
+
+  <!-- Mural interno da equipe -->
+  <div class="card" id="cardMural">
+    <h2>🗒️ Mural interno da equipe</h2>
+    <div class="card-sub">Recados entre síndico, portaria e segurança — moradores não veem isso</div>
+    <div id="muralContent"></div>
+  </div>
+</div>
+
+<script>
+const roles = ['Síndico', 'Porteiro', 'Segurança', 'Morador'];
+let currentRole = 'Síndico';
+
+let avisos = [
+  {texto:'Manutenção do elevador social nesta quinta, das 9h às 12h.', destino:'Todos os moradores', autor:'Síndico'},
+];
+let pendentes = [];
+let mural = [
+  {texto:'Troca de turno 22h: nenhuma ocorrência pendente.', autor:'Segurança'},
+];
+
+function renderRoleSwitch(){
+  const wrap = document.getElementById('roleSwitch');
+  wrap.innerHTML = '';
+  roles.forEach(r => {
+    const btn = document.createElement('button');
+    btn.className = 'role-btn' + (r === currentRole ? ' active' : '');
+    btn.textContent = r;
+    btn.onclick = () => { currentRole = r; render(); };
+    wrap.appendChild(btn);
+  });
+}
+
+function render(){
+  renderRoleSwitch();
+
+  const isSindico = currentRole === 'Síndico';
+  const isStaff = currentRole === 'Síndico' || currentRole === 'Porteiro' || currentRole === 'Segurança';
+  const isMorador = currentRole === 'Morador';
+
+  // Compor aviso
+  document.getElementById('composeAviso').classList.toggle('hidden', isMorador);
+  document.getElementById('avisoSub').textContent = isSindico
+    ? 'Você envia direto para os moradores.'
+    : isMorador
+      ? 'Avisos oficiais do condomínio.'
+      : 'Seu aviso vai para aprovação do síndico antes de ser enviado.';
+  document.getElementById('avisoBtn').textContent = isSindico ? 'Enviar' : 'Enviar para aprovação';
+
+  // Lista de avisos enviados
+  const listaAvisos = document.getElementById('listaAvisos');
+  listaAvisos.innerHTML = '';
+  if(avisos.length === 0){
+    listaAvisos.innerHTML = '<div class="empty">Nenhum aviso enviado ainda</div>';
+  } else {
+    avisos.slice().reverse().forEach(a => {
+      const div = document.createElement('div');
+      div.className = 'item';
+      div.innerHTML = `<div class="meta">${a.autor} → ${a.destino}</div>${a.texto}`;
+      listaAvisos.appendChild(div);
+    });
+  }
+
+  // Pendentes (só síndico)
+  document.getElementById('cardPendentes').classList.toggle('hidden', !isSindico);
+  const listaPendentes = document.getElementById('listaPendentes');
+  listaPendentes.innerHTML = '';
+  if(pendentes.length === 0){
+    listaPendentes.innerHTML = '<div class="empty">Nenhum aviso pendente</div>';
+  } else {
+    pendentes.forEach((p, i) => {
+      const div = document.createElement('div');
+      div.className = 'item pendente';
+      div.innerHTML = `<div class="meta">${p.autor} → ${p.destino}</div>${p.texto}
+        <div class="actions">
+          <button class="btn" onclick="aprovarPendente(${i})">Aprovar e enviar</button>
+          <button class="btn-outline" onclick="recusarPendente(${i})">Recusar</button>
+        </div>`;
+      listaPendentes.appendChild(div);
+    });
+  }
+
+  // Mural interno
+  const muralCard = document.getElementById('cardMural');
+  const muralContent = document.getElementById('muralContent');
+  if(isMorador){
+    muralCard.querySelector('.card-sub').textContent = 'Acesso restrito à equipe do condomínio.';
+    muralContent.innerHTML = '<div class="restricted">🔒 Você não tem acesso a esta área.</div>';
+  } else {
+    muralCard.querySelector('.card-sub').textContent = 'Recados entre síndico, portaria e segurança — moradores não veem isso.';
+    let html = `<div class="compose">
+      <textarea id="muralTexto" placeholder="Escreva um recado para a equipe..."></textarea>
+      <div class="compose-actions"><button class="btn" onclick="postarMural()">Postar no mural</button></div>
+    </div>`;
+    if(mural.length === 0){
+      html += '<div class="empty">Nenhum recado ainda</div>';
+    } else {
+      mural.slice().reverse().forEach(m => {
+        html += `<div class="item"><div class="meta">${m.autor}</div>${m.texto}</div>`;
+      });
+    }
+    muralContent.innerHTML = html;
+  }
+}
+
+function enviarAviso(){
+  const texto = document.getElementById('avisoTexto').value.trim();
+  if(!texto) return;
+  const destino = document.getElementById('avisoDestino').value;
+  if(currentRole === 'Síndico'){
+    avisos.push({texto, destino, autor: currentRole});
+  } else {
+    pendentes.push({texto, destino, autor: currentRole});
+  }
+  document.getElementById('avisoTexto').value = '';
+  render();
+}
+function aprovarPendente(i){
+  const p = pendentes.splice(i,1)[0];
+  avisos.push(p);
+  render();
+}
+function recusarPendente(i){
+  pendentes.splice(i,1);
+  render();
+}
+function postarMural(){
+  const texto = document.getElementById('muralTexto').value.trim();
+  if(!texto) return;
+  mural.push({texto, autor: currentRole});
+  render();
+}
+
+render();
+</script>
+</body>
+</html>
