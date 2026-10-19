@@ -104,7 +104,7 @@ O curso também exige fluxo em URL pública em uma etapa posterior. A dependênc
 
 - [x] Identificar os três integrantes do Grupo 6, conforme imagem enviada.
 - [x] Confirmar Caio Scandiuzzi Valente Coimbra como Tech Lead.
-- [ ] Distribuir e confirmar Product Owner e Quality & Ops.
+- [x] Distribuir e confirmar Product Owner e Quality & Ops.
 - [ ] Ratificar o problema escolhido.
 - [ ] Revisar Lean Canvas, hipótese e PRD v0.
 - [ ] Avaliar a proposta de IA: avisos automáticos por regras, isoladamente, não caracterizam IA.
