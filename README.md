@@ -25,7 +25,7 @@ Tema proposto: **Portaria Fácil — gestão de encomendas em condomínios**. Ra
 | Integrante | Papel | Usuário GitHub |
 | --- | --- | --- |
 | Caio Scandiuzzi Valente Coimbra | Tech Lead | CaioScan |
-| Aldenir Rodrigues Almeida | Quality & Ops | A informar |
+| Aldenir Rodrigues Almeida | Quality & Ops | AldenirRodrigues |
 | Renildo da Silva Santos Junior | Product Owner | A informar |
 
 Responsabilidades dos papéis; Product Owner e Quality & Ops ainda a distribuir:
