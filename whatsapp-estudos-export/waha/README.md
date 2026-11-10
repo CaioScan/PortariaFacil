@@ -3,6 +3,10 @@
 Ponte local que recebe eventos do WAHA, envia o texto de um comando ao n8n
 por HTTPS e devolve a resposta da Groq ao WhatsApp.
 
+O acompanhamento demonstrativo de encomendas usa um workflow separado:
+[`n8n-workflow-entregas.json`](../n8n-workflow-entregas.json). Ele confirma
+recebimento de eventos e não altera o fluxo de estudos `!ia` descrito aqui.
+
 O repositório não inclui telefone vinculado, sessão autenticada, tokens,
 credenciais do n8n nem capturas do ambiente local. Cada instalação configura
 suas próprias credenciais e vincula seu WhatsApp por QR Code.
