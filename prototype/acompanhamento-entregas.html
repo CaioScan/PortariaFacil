@@ -1,0 +1,497 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#183b38">
+  <title>Portaria Fácil | Acompanhamento de entregas</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #183b38;
+      --ink-soft: #315653;
+      --muted: #657d78;
+      --canvas: #f3f5ef;
+      --surface: #fffefa;
+      --line: #d6dfd8;
+      --field: #edf2eb;
+      --green: #277568;
+      --green-dark: #1d5e54;
+      --amber: #ad6d1d;
+      --amber-bg: #fff2dc;
+      --red: #b94b3a;
+      --red-bg: #fff0ec;
+      --blue: #466f79;
+      --blue-bg: #eaf3f3;
+      --shadow: 0 16px 38px rgba(24, 59, 56, .08);
+      font-family: "Segoe UI", "Aptos", sans-serif;
+      font-synthesis: none;
+      text-rendering: optimizeLegibility;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-width: 320px;
+      min-height: 100vh;
+      color: var(--ink);
+      background-color: var(--canvas);
+      background-image: linear-gradient(135deg, rgba(39, 117, 104, .045) 1px, transparent 1px);
+      background-size: 24px 24px;
+      font-size: 14px;
+      line-height: 1.45;
+    }
+    button, input, select { font: inherit; }
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+    button { cursor: pointer; }
+    button:focus-visible, input:focus-visible, select:focus-visible, summary:focus-visible {
+      outline: 3px solid rgba(39, 117, 104, .32);
+      outline-offset: 2px;
+    }
+    .shell { max-width: 1240px; margin: 0 auto; padding: 26px 26px 54px; }
+    .topbar { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; margin-bottom: 22px; }
+    .brandline { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; color: var(--green); font-size: 11px; font-weight: 750; letter-spacing: .12em; text-transform: uppercase; }
+    .brandmark { display: grid; width: 28px; height: 28px; place-items: center; border-radius: 8px; background: var(--ink); color: #fffefa; font-size: 15px; letter-spacing: 0; }
+    h1 { margin: 0; font-family: Georgia, "Times New Roman", serif; font-size: 30px; font-weight: 500; letter-spacing: 0; line-height: 1.15; }
+    .topbar p { margin: 7px 0 0; color: var(--muted); }
+    .top-actions { display: flex; align-items: center; gap: 10px; }
+    .connection { display: flex; align-items: center; gap: 9px; min-height: 40px; padding: 8px 11px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); }
+    .connection-dot { width: 9px; height: 9px; flex: none; border-radius: 50%; background: var(--amber); box-shadow: 0 0 0 3px var(--amber-bg); }
+    .connection[data-state="connected"] .connection-dot { background: var(--green); box-shadow: 0 0 0 3px #e3f2e9; }
+    .connection[data-state="offline"] .connection-dot { background: var(--red); box-shadow: 0 0 0 3px var(--red-bg); }
+    .connection-copy { display: grid; line-height: 1.15; }
+    .connection-copy strong { font-size: 12px; }
+    .connection-copy span { margin-top: 3px; color: var(--muted); font-size: 11px; }
+    .button { display: inline-flex; min-height: 38px; align-items: center; justify-content: center; gap: 7px; padding: 8px 12px; border: 1px solid transparent; border-radius: 5px; background: var(--green); color: white; font-weight: 700; transition: background .16s ease, transform .16s ease; }
+    .button:hover { background: var(--green-dark); }
+    .button:active { transform: translateY(1px); }
+    .button.secondary { border-color: var(--line); background: var(--surface); color: var(--ink-soft); }
+    .button.secondary:hover { border-color: #9eb4aa; background: #f7faf4; }
+    .button:disabled { cursor: not-allowed; opacity: .55; }
+    .notice { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 18px; padding: 13px 15px; border: 1px solid #e8d5b6; border-left: 4px solid #d2923f; border-radius: 5px; background: #fff8e9; color: #604d31; }
+    .notice-mark { display: grid; width: 20px; height: 20px; flex: none; place-items: center; border: 1px solid #d9b477; border-radius: 50%; font-size: 12px; font-weight: 800; }
+    .notice strong { display: block; margin-bottom: 1px; font-size: 12px; }
+    .notice p { margin: 0; font-size: 12px; }
+    .summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) minmax(245px, 1.35fr); gap: 10px; margin-bottom: 16px; }
+    .metric { min-height: 94px; padding: 15px 16px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); box-shadow: 0 3px 12px rgba(24, 59, 56, .025); }
+    .metric span { display: block; color: var(--muted); font-size: 12px; }
+    .metric strong { display: block; margin-top: 5px; font-family: Georgia, "Times New Roman", serif; font-size: 29px; font-weight: 500; line-height: 1.1; }
+    .metric.alert strong { color: var(--red); }
+    .metric.integration { display: flex; flex-direction: column; justify-content: center; background: var(--ink); color: #f6f7ee; }
+    .metric.integration span { color: #b8ccc2; }
+    .metric.integration strong { margin-top: 3px; font-family: "Segoe UI", "Aptos", sans-serif; font-size: 14px; font-weight: 700; }
+    .workspace { display: grid; grid-template-columns: minmax(0, 1.75fr) minmax(280px, .75fr); align-items: start; gap: 16px; }
+    .panel { min-width: 0; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); box-shadow: var(--shadow); }
+    .panel-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; padding: 17px 18px 13px; }
+    .panel h2 { margin: 0; font-size: 16px; font-weight: 700; letter-spacing: 0; }
+    .panel-head p { margin: 4px 0 0; color: var(--muted); font-size: 12px; }
+    .filters { display: flex; flex-wrap: wrap; gap: 4px; padding: 0 18px 13px; border-bottom: 1px solid var(--line); }
+    .filter { min-height: 30px; padding: 5px 10px; border: 1px solid transparent; border-radius: 4px; background: transparent; color: var(--muted); font-size: 12px; font-weight: 650; }
+    .filter[aria-pressed="true"] { border-color: #c7dcd3; background: #e8f1eb; color: var(--green-dark); }
+    .search { display: flex; align-items: center; min-width: 165px; gap: 6px; margin-left: auto; }
+    .search input { width: 100%; min-width: 0; height: 30px; padding: 5px 8px; border: 1px solid var(--line); border-radius: 4px; background: #fff; color: var(--ink); font-size: 12px; }
+    .delivery-list { padding: 0 18px; }
+    .delivery { padding: 15px 0; border-bottom: 1px solid #e8ece6; animation: appear .28s ease both; }
+    .delivery:last-child { border-bottom: 0; }
+    .delivery-main { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px 14px; align-items: start; }
+    .delivery-title { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+    .reference { font-weight: 750; font-variant-numeric: tabular-nums; }
+    .unit { color: var(--muted); font-size: 12px; }
+    .description { margin-top: 5px; color: var(--ink-soft); }
+    .delivery-meta { display: flex; flex-wrap: wrap; gap: 5px 13px; margin-top: 6px; color: var(--muted); font-size: 11px; }
+    .delivery-actions { display: flex; align-items: center; justify-content: flex-end; gap: 7px; }
+    .button.small { min-height: 31px; padding: 5px 9px; font-size: 11px; }
+    .button.link { min-height: 30px; padding: 5px 7px; border-color: transparent; background: transparent; color: var(--green-dark); }
+    .button.link:hover { background: #edf4ef; }
+    .badge { display: inline-flex; align-items: center; min-height: 22px; padding: 3px 7px; border: 1px solid transparent; border-radius: 4px; font-size: 10px; font-weight: 750; white-space: nowrap; }
+    .badge.pending { border-color: #ead4ae; background: var(--amber-bg); color: var(--amber); }
+    .badge.delivered { border-color: #c9ddd1; background: #e7f2e9; color: var(--green-dark); }
+    .badge.failed { border-color: #efc8bf; background: var(--red-bg); color: var(--red); }
+    .badge.received { border-color: #c9dddc; background: var(--blue-bg); color: var(--blue); }
+    .badge.demo { border-color: var(--line); background: #f3f4ef; color: var(--muted); }
+    .attempts { margin-top: 10px; color: var(--muted); font-size: 11px; }
+    .attempts summary { width: fit-content; cursor: pointer; }
+    .attempts ol { display: grid; gap: 6px; margin: 8px 0 2px; padding-left: 18px; }
+    .attempts li { padding-left: 2px; }
+    .attempts time { color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+    .empty { padding: 34px 14px; color: var(--muted); text-align: center; }
+    .empty strong { display: block; margin-bottom: 4px; color: var(--ink-soft); }
+    .form-panel { position: sticky; top: 16px; }
+    .form-panel form { display: grid; gap: 12px; padding: 0 18px 18px; }
+    .field { display: grid; gap: 5px; }
+    .field label { color: var(--ink-soft); font-size: 11px; font-weight: 700; }
+    .field input, .field select { width: 100%; min-height: 38px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 4px; background: #fff; color: var(--ink); }
+    .field input::placeholder { color: #9aaa9f; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+    .form-note { margin: -2px 0 0; color: var(--muted); font-size: 11px; }
+    .form-panel .button { width: 100%; margin-top: 2px; }
+    .status-line { min-height: 20px; margin: 0 18px 16px; color: var(--muted); font-size: 11px; }
+    .status-line[data-tone="error"] { color: var(--red); }
+    .status-line[data-tone="success"] { color: var(--green-dark); }
+    .page-foot { display: flex; justify-content: space-between; gap: 12px; margin-top: 16px; color: var(--muted); font-size: 11px; }
+    dialog { width: min(420px, calc(100vw - 28px)); padding: 0; border: 1px solid var(--line); border-radius: 7px; color: var(--ink); box-shadow: 0 20px 70px rgba(16, 43, 40, .25); }
+    dialog::backdrop { background: rgba(15, 35, 33, .45); }
+    .dialog-body { padding: 21px; }
+    .dialog-body h2 { margin: 0; font-family: Georgia, "Times New Roman", serif; font-size: 23px; font-weight: 500; }
+    .dialog-body p { color: var(--muted); font-size: 12px; }
+    .dialog-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 17px; }
+    @keyframes appear { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+    @media (max-width: 900px) {
+      .summary { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .metric.integration { grid-column: 1 / -1; min-height: 74px; }
+      .workspace { grid-template-columns: minmax(0, 1.35fr) minmax(265px, .8fr); }
+    }
+    @media (max-width: 700px) {
+      .shell { padding: 20px 14px 36px; }
+      .topbar { align-items: stretch; flex-direction: column; gap: 14px; }
+      .top-actions { justify-content: space-between; }
+      h1 { font-size: 27px; }
+      .summary { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; }
+      .metric { min-height: 82px; padding: 12px 10px; }
+      .metric strong { font-size: 26px; }
+      .metric span { font-size: 10px; }
+      .workspace { grid-template-columns: 1fr; }
+      .form-panel { position: static; grid-row: 1; }
+      .panel-head { padding-right: 14px; padding-left: 14px; }
+      .filters { padding-right: 14px; padding-left: 14px; }
+      .delivery-list { padding-right: 14px; padding-left: 14px; }
+      .delivery-main { grid-template-columns: 1fr; }
+      .delivery-actions { justify-content: flex-start; }
+      .page-foot { flex-direction: column; }
+    }
+    @media (max-width: 420px) {
+      .brandline { margin-bottom: 8px; }
+      .summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .metric.integration { grid-column: 1 / -1; }
+      .search { order: 2; width: 100%; margin: 4px 0 0; }
+      .filters { gap: 2px; }
+      .filter { padding-right: 7px; padding-left: 7px; }
+      .form-row { grid-template-columns: 1fr; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar">
+      <div>
+        <div class="brandline"><span class="brandmark" aria-hidden="true">P</span> Portaria Fácil <span aria-hidden="true">/</span> Operação</div>
+        <h1>Acompanhamento de entregas</h1>
+        <p>Residencial Bosque Verde <span aria-hidden="true">·</span> Portaria principal</p>
+      </div>
+      <div class="top-actions">
+        <div class="connection" id="connection" data-state="demo" role="status" aria-live="polite">
+          <span class="connection-dot" aria-hidden="true"></span>
+          <span class="connection-copy"><strong id="connectionTitle">Modo demonstração</strong><span id="connectionText">n8n não configurado</span></span>
+        </div>
+        <button class="button secondary" id="resetButton" type="button">Restaurar exemplos</button>
+      </div>
+    </header>
+
+    <aside class="notice" aria-label="Limite da demonstração">
+      <span class="notice-mark" aria-hidden="true">i</span>
+      <div><strong>Registro e comunicação são etapas separadas</strong><p>A encomenda permanece registrada mesmo quando o webhook falha. O retorno do n8n confirma apenas o recebimento do evento, não a entrega ou leitura de uma mensagem.</p></div>
+    </aside>
+
+    <section class="summary" aria-label="Resumo da portaria">
+      <div class="metric"><span>Aguardando retirada</span><strong id="pendingCount">0</strong></div>
+      <div class="metric alert"><span>Avisos com falha</span><strong id="failedCount">0</strong></div>
+      <div class="metric"><span>Retiradas hoje</span><strong id="deliveredCount">0</strong></div>
+      <div class="metric integration"><span>Integração de avisos</span><strong id="integrationSummary">Preparando modo local</strong></div>
+    </section>
+
+    <div class="workspace">
+      <section class="panel" aria-labelledby="deliveriesHeading">
+        <div class="panel-head">
+          <div><h2 id="deliveriesHeading">Encomendas</h2><p>Histórico de entrada, avisos e retirada</p></div>
+          <span class="badge demo" id="recordCount">0 registros</span>
+        </div>
+        <div class="filters" role="group" aria-label="Filtrar encomendas">
+          <button class="filter" data-filter="pending" aria-pressed="true" type="button">Pendentes</button>
+          <button class="filter" data-filter="all" aria-pressed="false" type="button">Todas</button>
+          <button class="filter" data-filter="delivered" aria-pressed="false" type="button">Entregues</button>
+          <label class="search"><span class="sr-only">Buscar por referência, unidade ou destinatário</span><input id="searchInput" type="search" placeholder="Buscar encomenda" autocomplete="off"></label>
+        </div>
+        <div class="delivery-list" id="deliveryList" aria-live="polite"></div>
+      </section>
+
+      <section class="panel form-panel" aria-labelledby="newDeliveryHeading">
+        <div class="panel-head">
+          <div><h2 id="newDeliveryHeading">Registrar chegada</h2><p>Confirme os dados antes de salvar</p></div>
+        </div>
+        <form id="deliveryForm">
+          <div class="form-row">
+            <div class="field"><label for="unitInput">Unidade</label><select id="unitInput" required><option value="Bloco A · 31">Bloco A · 31</option><option value="Bloco A · 52">Bloco A · 52</option><option value="Bloco B · 14">Bloco B · 14</option><option value="Bloco B · 74">Bloco B · 74</option></select></div>
+            <div class="field"><label for="recipientInput">Destinatário</label><input id="recipientInput" maxlength="100" placeholder="Nome aprovado" required></div>
+          </div>
+          <div class="field"><label for="carrierInput">Transportadora</label><input id="carrierInput" maxlength="80" placeholder="Ex.: Correios" required></div>
+          <div class="field"><label for="descriptionInput">Descrição</label><input id="descriptionInput" maxlength="160" placeholder="Ex.: Caixa pequena" required></div>
+          <p class="form-note">Dados demonstrativos. Nenhum telefone é enviado pelo protótipo.</p>
+          <button class="button" type="submit">Salvar e solicitar aviso</button>
+        </form>
+        <p class="status-line" id="formStatus" role="status" aria-live="polite"></p>
+      </section>
+    </div>
+
+    <footer class="page-foot"><span>Protótipo local · dados salvos somente neste navegador</span><span>Uma tentativa aceita pelo n8n não comprova entrega no WhatsApp.</span></footer>
+  </main>
+
+  <dialog id="withdrawalDialog" aria-labelledby="withdrawalTitle">
+    <form class="dialog-body" id="withdrawalForm">
+      <h2 id="withdrawalTitle">Confirmar retirada</h2>
+      <p id="withdrawalReference"></p>
+      <div class="field"><label for="receiverInput">Quem recebeu?</label><input id="receiverInput" maxlength="100" required autocomplete="name"></div>
+      <div class="dialog-actions"><button class="button secondary" id="cancelWithdrawal" type="button">Cancelar</button><button class="button" type="submit">Confirmar entrega</button></div>
+    </form>
+  </dialog>
+
+  <script>
+    const storageKey = 'portaria-facil-entregas-demo-v1';
+    const filters = new Set(['pending', 'all', 'delivered']);
+    const state = { deliveries: [], filter: 'pending', query: '', n8nConfigured: false, apiOnline: false, selectedReference: null };
+    const $ = id => document.getElementById(id);
+    const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
+    const nowIso = () => new Date().toISOString();
+    const dateTime = value => new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(value));
+
+    function seedDeliveries() {
+      const daysAgo = days => new Date(Date.now() - days * 86400000).toISOString();
+      return [
+        { reference: 'ENC-2041', unit: 'Bloco A · 31', recipientName: 'Ana Costa', carrier: 'Mercado Livre', description: 'Caixa pequena', arrivedAt: daysAgo(0), status: 'pending', attempts: [{ number: 1, requestedAt: daysAgo(0), result: 'demo', detail: 'Exemplo ilustrativo, sem chamada ao n8n.' }] },
+        { reference: 'ENC-2040', unit: 'Bloco B · 74', recipientName: 'Rafael Lima', carrier: 'Correios', description: 'Envelope', arrivedAt: daysAgo(1), status: 'pending', attempts: [{ number: 1, requestedAt: daysAgo(1), result: 'failed', detail: 'Exemplo ilustrativo de falha.' }, { number: 2, requestedAt: daysAgo(0), result: 'received', detail: 'Exemplo ilustrativo de recebimento pelo n8n.' }] },
+        { reference: 'ENC-2039', unit: 'Bloco A · 52', recipientName: 'Luiza Santos', carrier: 'Shopee', description: 'Pacote médio', arrivedAt: daysAgo(2), status: 'delivered', receivedBy: 'Luiza Santos', deliveredAt: daysAgo(0), deliveredBy: 'Portaria', attempts: [{ number: 1, requestedAt: daysAgo(2), result: 'demo', detail: 'Exemplo ilustrativo, sem chamada ao n8n.' }] },
+        { reference: 'ENC-2038', unit: 'Bloco B · 14', recipientName: 'Marcos Reis', carrier: 'Amazon', description: 'Caixa', arrivedAt: daysAgo(4), status: 'pending', attempts: [] },
+      ];
+    }
+
+    function save() {
+      localStorage.setItem(storageKey, JSON.stringify(state.deliveries));
+    }
+
+    function load() {
+      try {
+        const saved = JSON.parse(localStorage.getItem(storageKey));
+        if (Array.isArray(saved) && saved.every(item => item && typeof item.reference === 'string' && Array.isArray(item.attempts))) {
+          state.deliveries = saved;
+          return;
+        }
+      } catch { /* Recarrega os exemplos se o armazenamento estiver inválido. */ }
+      state.deliveries = seedDeliveries();
+      save();
+    }
+
+    function latestResult(delivery) {
+      return delivery.attempts.at(-1)?.result || 'none';
+    }
+
+    function statusBadge(delivery) {
+      if (delivery.status === 'delivered') return '<span class="badge delivered">Entregue</span>';
+      const result = latestResult(delivery);
+      if (result === 'failed') return '<span class="badge failed">Aviso com falha</span>';
+      if (result === 'received') return '<span class="badge received">Recebido pelo n8n</span>';
+      if (result === 'demo') return '<span class="badge demo">Exemplo</span>';
+      return '<span class="badge pending">Pendente de retirada</span>';
+    }
+
+    function attemptRows(delivery) {
+      if (!delivery.attempts.length) return '';
+      const rows = delivery.attempts.slice().reverse().map(attempt => {
+        const labels = { received: 'Recebido pelo n8n', failed: 'Falha', demo: 'Exemplo' };
+        return `<li><time datetime="${escapeHtml(attempt.requestedAt)}">${escapeHtml(dateTime(attempt.requestedAt))}</time> · ${escapeHtml(labels[attempt.result] || 'Solicitação')} · ${escapeHtml(attempt.detail || '')}</li>`;
+      }).join('');
+      return `<details class="attempts"><summary>${delivery.attempts.length} ${delivery.attempts.length === 1 ? 'tentativa registrada' : 'tentativas registradas'}</summary><ol>${rows}</ol></details>`;
+    }
+
+    function renderDelivery(delivery) {
+      const delivered = delivery.status === 'delivered';
+      const arrivalLabel = `Entrada em ${dateTime(delivery.arrivedAt)}`;
+      const deliveryLabel = delivered ? `Retirada por ${escapeHtml(delivery.receivedBy)} em ${dateTime(delivery.deliveredAt)}` : arrivalLabel;
+      return `<article class="delivery">
+        <div class="delivery-main">
+          <div>
+            <div class="delivery-title"><span class="reference">${escapeHtml(delivery.reference)}</span><span class="unit">${escapeHtml(delivery.unit)}</span>${statusBadge(delivery)}</div>
+            <div class="description">${escapeHtml(delivery.description)} · ${escapeHtml(delivery.carrier)}</div>
+            <div class="delivery-meta"><span>Destinatário: ${escapeHtml(delivery.recipientName)}</span><span>${deliveryLabel}</span>${delivered ? `<span>Confirmado por ${escapeHtml(delivery.deliveredBy)}</span>` : ''}</div>
+          </div>
+          <div class="delivery-actions">
+            ${delivered ? '' : `<button class="button link small" data-action="remind" data-reference="${escapeHtml(delivery.reference)}" type="button">Reavisar</button><button class="button small" data-action="withdraw" data-reference="${escapeHtml(delivery.reference)}" type="button">Confirmar retirada</button>`}
+          </div>
+        </div>
+        ${attemptRows(delivery)}
+      </article>`;
+    }
+
+    function render() {
+      const query = state.query.trim().toLocaleLowerCase('pt-BR');
+      const visible = state.deliveries.filter(delivery => {
+        const matchesFilter = state.filter === 'all' || (state.filter === 'delivered') === (delivery.status === 'delivered');
+        const matchesQuery = !query || [delivery.reference, delivery.unit, delivery.recipientName, delivery.carrier].some(value => value.toLocaleLowerCase('pt-BR').includes(query));
+        return matchesFilter && matchesQuery;
+      });
+      const pending = state.deliveries.filter(delivery => delivery.status === 'pending').length;
+      const failed = state.deliveries.filter(delivery => delivery.status === 'pending' && latestResult(delivery) === 'failed').length;
+      const today = new Date().toDateString();
+      const deliveredToday = state.deliveries.filter(delivery => delivery.status === 'delivered' && new Date(delivery.deliveredAt).toDateString() === today).length;
+      $('pendingCount').textContent = pending;
+      $('failedCount').textContent = failed;
+      $('deliveredCount').textContent = deliveredToday;
+      $('recordCount').textContent = `${state.deliveries.length} ${state.deliveries.length === 1 ? 'registro' : 'registros'}`;
+      $('integrationSummary').textContent = state.n8nConfigured ? 'Webhook n8n configurado' : 'Somente dados demonstrativos';
+      document.querySelectorAll('[data-filter]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.filter === state.filter)));
+      $('deliveryList').innerHTML = visible.length ? visible.map(renderDelivery).join('') : '<div class="empty"><strong>Nenhuma encomenda nesta lista</strong>Ajuste o filtro ou registre uma nova chegada.</div>';
+    }
+
+    async function configureIntegration() {
+      const connection = $('connection');
+      try {
+        const response = await fetch('/api/config', { headers: { Accept: 'application/json' } });
+        if (!response.ok) throw new Error('Servidor local indisponível.');
+        const config = await response.json();
+        state.apiOnline = true;
+        state.n8nConfigured = config.n8nConfigured === true;
+        connection.dataset.state = state.n8nConfigured ? 'connected' : 'demo';
+        $('connectionTitle').textContent = state.n8nConfigured ? 'Webhook configurado' : 'Modo demonstração';
+        $('connectionText').textContent = state.n8nConfigured ? 'n8n recebe eventos' : 'n8n não configurado';
+      } catch {
+        state.apiOnline = false;
+        state.n8nConfigured = false;
+        connection.dataset.state = 'offline';
+        $('connectionTitle').textContent = 'Servidor local indisponível';
+        $('connectionText').textContent = 'Eventos não serão enviados';
+      }
+      render();
+    }
+
+    async function requestNotice(delivery, reason) {
+      const number = delivery.attempts.length + 1;
+      const requestedAt = nowIso();
+      const attempt = {
+        number,
+        requestedAt,
+        result: 'failed',
+        detail: 'Não enviado: webhook n8n não configurado.',
+      };
+      delivery.attempts.push(attempt);
+      save();
+      render();
+
+      if (!state.apiOnline || !state.n8nConfigured) {
+        $('formStatus').dataset.tone = 'error';
+        $('formStatus').textContent = 'Registro salvo. Aviso não enviado: configure o webhook n8n no servidor local.';
+        return;
+      }
+
+      const eventId = `${delivery.reference}:attempt-${number}`;
+      const event = {
+        type: 'delivery.notification.requested',
+        eventId,
+        delivery: {
+          reference: delivery.reference,
+          unit: delivery.unit,
+          recipientName: delivery.recipientName,
+          description: delivery.description,
+          carrier: delivery.carrier,
+          arrivedAt: delivery.arrivedAt,
+        },
+        attempt: { id: eventId, number, requestedAt, reason },
+      };
+
+      try {
+        const response = await fetch('/api/entregas/aviso', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(event),
+        });
+        const result = await response.json();
+        if (!response.ok || result.accepted !== true || result.eventId !== eventId) throw new Error(result.error || 'n8n não confirmou o evento.');
+        attempt.result = 'received';
+        attempt.detail = 'Evento recebido pelo n8n; entrega no WhatsApp não confirmada.';
+        $('formStatus').dataset.tone = 'success';
+        $('formStatus').textContent = `O n8n recebeu o aviso de ${delivery.reference}.`;
+      } catch (error) {
+        attempt.result = 'failed';
+        attempt.detail = error.message || 'Falha ao encaminhar para o n8n.';
+        $('formStatus').dataset.tone = 'error';
+        $('formStatus').textContent = `Encomenda preservada. ${attempt.detail}`;
+      }
+      save();
+      render();
+    }
+
+    function nextReference() {
+      const highest = state.deliveries.reduce((max, delivery) => Math.max(max, Number(delivery.reference.replace(/^ENC-/, '')) || 0), 2041);
+      return `ENC-${highest + 1}`;
+    }
+
+    $('deliveryForm').addEventListener('submit', async event => {
+      event.preventDefault();
+      const delivery = {
+        reference: nextReference(),
+        unit: $('unitInput').value,
+        recipientName: $('recipientInput').value.trim(),
+        carrier: $('carrierInput').value.trim(),
+        description: $('descriptionInput').value.trim(),
+        arrivedAt: nowIso(),
+        status: 'pending',
+        attempts: [],
+      };
+      state.deliveries.unshift(delivery);
+      save();
+      render();
+      event.currentTarget.reset();
+      await requestNotice(delivery, 'arrival');
+    });
+
+    document.querySelectorAll('[data-filter]').forEach(button => button.addEventListener('click', () => {
+      if (!filters.has(button.dataset.filter)) return;
+      state.filter = button.dataset.filter;
+      render();
+    }));
+    $('searchInput').addEventListener('input', event => { state.query = event.target.value; render(); });
+    $('deliveryList').addEventListener('click', event => {
+      const button = event.target.closest('button[data-action]');
+      if (!button) return;
+      const delivery = state.deliveries.find(item => item.reference === button.dataset.reference);
+      if (!delivery || delivery.status !== 'pending') return;
+      if (button.dataset.action === 'remind') requestNotice(delivery, 'reminder');
+      if (button.dataset.action === 'withdraw') {
+        state.selectedReference = delivery.reference;
+        $('withdrawalReference').textContent = `${delivery.reference} · ${delivery.unit} · ${delivery.recipientName}`;
+        $('receiverInput').value = '';
+        $('withdrawalDialog').showModal();
+        $('receiverInput').focus();
+      }
+    });
+    $('withdrawalForm').addEventListener('submit', event => {
+      event.preventDefault();
+      const delivery = state.deliveries.find(item => item.reference === state.selectedReference);
+      const receivedBy = $('receiverInput').value.trim();
+      if (!delivery || delivery.status !== 'pending' || !receivedBy) return;
+      delivery.status = 'delivered';
+      delivery.receivedBy = receivedBy;
+      delivery.deliveredAt = nowIso();
+      delivery.deliveredBy = 'Portaria';
+      save();
+      $('withdrawalDialog').close();
+      state.filter = 'all';
+      render();
+    });
+    $('cancelWithdrawal').addEventListener('click', () => $('withdrawalDialog').close());
+    $('resetButton').addEventListener('click', () => {
+      state.deliveries = seedDeliveries();
+      state.filter = 'pending';
+      state.query = '';
+      $('searchInput').value = '';
+      $('formStatus').textContent = '';
+      $('formStatus').removeAttribute('data-tone');
+      save();
+      render();
+    });
+
+    load();
+    render();
+    configureIntegration();
+  </script>
+</body>
+</html>
