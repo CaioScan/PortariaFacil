@@ -1,0 +1,84 @@
+{
+  "name": "Portaria Fácil - Avisos de encomenda",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "portaria-entregas",
+        "authentication": "headerAuth",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "356a6f2e-cb1d-4c0f-b092-7d4d8925088e",
+      "name": "Entrada de encomenda",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "8824e970-1c50-4ae3-9606-ae43d4d57bf2"
+    },
+    {
+      "parameters": {
+        "jsCode": "const event = $json.body;\nconst text = (value, limit) => typeof value === 'string' && value.trim() && value.length <= limit ? value.trim() : null;\nconst eventId = text(event?.eventId, 120);\nconst reference = text(event?.delivery?.reference, 40);\nconst recipient = text(event?.delivery?.recipientName, 100);\nconst unit = text(event?.delivery?.unit, 40);\nconst description = text(event?.delivery?.description, 160);\nconst carrier = text(event?.delivery?.carrier, 80);\nconst attemptNumber = event?.attempt?.number;\nif (event?.type !== 'delivery.notification.requested' || !eventId || !reference || !recipient || !unit || !description || !carrier || !Number.isInteger(attemptNumber) || attemptNumber < 1) {\n  throw new Error('Evento de encomenda inválido.');\n}\nconst greeting = `Olá, ${recipient}! Uma encomenda chegou à portaria do seu condomínio.`;\nconst messagePreview = `${greeting} Referência: ${reference}. Unidade: ${unit}. Procure a portaria para retirar.`;\nreturn [{ json: { accepted: true, eventId, status: 'received', reference, attemptNumber, messagePreview } }];"
+      },
+      "id": "90004126-5936-4fcb-89a6-39dfe679cfc8",
+      "name": "Validar e preparar aviso",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { accepted: $json.accepted, eventId: $json.eventId, status: $json.status } }}",
+        "options": {}
+      },
+      "id": "9e4d3137-9276-42cb-b859-c87722977d8f",
+      "name": "Confirmar recebimento",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        520,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Entrada de encomenda": {
+      "main": [
+        [
+          {
+            "node": "Validar e preparar aviso",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validar e preparar aviso": {
+      "main": [
+        [
+          {
+            "node": "Confirmar recebimento",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataSuccessExecution": "none",
+    "saveDataErrorExecution": "none",
+    "saveManualExecutions": false
+  },
+  "pinData": {},
+  "tags": []
+}
