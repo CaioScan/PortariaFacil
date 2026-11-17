@@ -44,9 +44,9 @@ Tema proposto: **Portaria Fácil — gestão de encomendas em condomínios**. Ra
 | --- | --- | --- |
 | Caio Scandiuzzi Valente Coimbra | Tech Lead | CaioScan |
 | Aldenir Rodrigues Almeida | Quality & Ops | AldenirRodrigues |
-| Renildo da Silva Santos Junior | Product Owner | A informar |
+| Renildo da Silva Santos Junior | Product Owner | Renildo-Junior |
 
-Responsabilidades dos papéis; Product Owner e Quality & Ops ainda a distribuir:
+Responsabilidades dos papéis definidos no Grupo 6:
 
 | Papel | Responsabilidade |
 | --- | --- |
@@ -118,21 +118,35 @@ O fluxo de aviso discutido até aqui usa consulta periódica e popup no app aber
 
 O curso também exige fluxo em URL pública em uma etapa posterior. A dependência exclusiva de instalação de APK precisa ser avaliada no checkpoint de produto.
 
-## 7. Decisões necessárias para fechar hoje
+## 7. Situação das entregas e próximas ações
 
-- [x] Identificar os três integrantes do Grupo 6, conforme imagem enviada.
-- [x] Confirmar Caio Scandiuzzi Valente Coimbra como Tech Lead.
-- [x] Distribuir e confirmar Product Owner e Quality & Ops.
-- [ ] Ratificar o problema escolhido.
-- [ ] Revisar Lean Canvas, hipótese e PRD v0.
-- [ ] Avaliar a proposta de IA: avisos automáticos por regras, isoladamente, não caracterizam IA.
-- [x] Registrar a URL do repositório informada por Caio.
-- [ ] Adicionar os integrantes e o professor com os acessos adequados.
-- [ ] Configurar proteção da main, revisão por outro integrante e exigência de CI, conforme slide 71; a configuração não foi executada nesta entrega.
-- [x] Publicar os documentos em duas PRs para revisão.
-- [ ] Revisar e integrar as PRs após aprovação humana.
-- [ ] Registrar a revisão humana no diário.
-- [ ] Criar a tag `checkpoint-01` no commit aprovado, dentro do prazo da aula.
+Atualizado em **16/11/2026**, com consulta ao repositório. Itens concluídos representam entregas ou configurações verificadas; não equivalem à aprovação acadêmica.
+
+### Concluído
+
+- [x] Identificar os três integrantes e definir os papéis: Caio como Tech Lead, Renildo como Product Owner e Aldenir como Quality & Ops.
+- [x] Criar o repositório [CaioScan/PortariaFacil](https://github.com/CaioScan/PortariaFacil).
+- [x] Conceder acesso ao professor `marcusvas` e aos integrantes `AldenirRodrigues` e `Renildo-Junior`, além do proprietário `CaioScan`.
+- [x] Documentar o problema, os processos e o escopo de avisos de encomendas e chamados do condomínio.
+- [x] Elaborar e atualizar Lean Canvas, hipótese de valor e PRD v0, com critérios de aceite.
+- [x] Definir a hipótese de IA para estruturar relatos e solicitar informações faltantes; avisos automáticos isolados não são apresentados como IA.
+- [x] Publicar os documentos e os demos e integrar as PRs [#1](https://github.com/CaioScan/PortariaFacil/pull/1), [#2](https://github.com/CaioScan/PortariaFacil/pull/2), [#3](https://github.com/CaioScan/PortariaFacil/pull/3) e [#4](https://github.com/CaioScan/PortariaFacil/pull/4).
+- [x] Versionar o diário agêntico e registrar atividades, limitações e intervenções do proponente.
+- [x] Disponibilizar o [painel no GPT Sites](https://portaria-facil-gestao.scannn.chatgpt.site), com acesso privado e banco PostgreSQL existente.
+
+### Pendente de decisão ou validação humana
+
+- [ ] Registrar a ratificação do problema e do escopo pelo POD e o retorno do professor.
+- [ ] Registrar a aprovação humana de Lean Canvas, hipótese e PRD; elaboração e merge não comprovam essa aprovação.
+- [ ] Validar a utilidade da IA com usuários e executar sua avaliação no fluxo do produto. A hipótese está documentada; a integração de IA ao painel ainda está pendente.
+- [ ] Revisar a [PR #5 — Painel PostgreSQL e GPT Sites](https://github.com/CaioScan/PortariaFacil/pull/5), ainda aberta nesta conferência.
+- [ ] Registrar no diário quem revisou, o que foi aprovado e quais ajustes foram solicitados. As PRs #1 e #2 não possuem revisões registradas no GitHub nesta conferência.
+
+### Pendente de configuração do repositório
+
+- [ ] Proteger a `main` e exigir revisão de outro integrante antes do merge. A API do GitHub informou que a branch ainda não está protegida.
+- [ ] Configurar o CI e exigir sua aprovação antes do merge. Não foram encontrados workflows do GitHub Actions; testes locais não substituem essa configuração.
+- [ ] Definir com o grupo/professor o commit de referência e criar a tag `checkpoint-01`. Não há tags no repositório nesta conferência. A data e a evidência reais devem ser registradas, sem declarar retroativamente cumprimento do prazo da aula.
 
 ## 8. Referências do material da disciplina
 

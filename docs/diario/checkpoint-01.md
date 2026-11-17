@@ -38,3 +38,11 @@ As PRs serão mantidas abertas, sem merge e sem tag de checkpoint, aguardando re
 | Correções solicitadas ao agente | [preencher com ocorrências reais] |
 | Evidência das PRs revisadas | [links após abertura e revisão] |
 | Commit e tag do checkpoint | [preencher após integração] |
+
+## Conferência posterior — 16/11/2026
+
+O proponente solicitou a atualização do checklist do README. Na consulta ao GitHub, foram confirmados os colaboradores `CaioScan`, `AldenirRodrigues`, `Renildo-Junior` e o professor `marcusvas`. Os papéis registrados no README são Tech Lead, Quality & Ops e Product Owner, respectivamente para Caio, Aldenir e Renildo.
+
+As PRs #1 a #4 estavam integradas, e a PR #5 permanecia aberta. Não havia revisões registradas nas PRs #1 e #2, tag de checkpoint, proteção da main ou workflows de GitHub Actions. O README foi ajustado para separar entregas verificadas de aprovação humana e de configurações ainda pendentes. As seções anteriores deste diário preservam o contexto histórico da preparação inicial; não descrevem o estado atual das PRs.
+
+Esta conferência não registra aprovação do professor, não configura regras do GitHub nem cria tags.
