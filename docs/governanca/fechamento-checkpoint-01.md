@@ -1,6 +1,6 @@
 # Fechamento do checkpoint 01
 
-## Decisões documentadas para ratificação
+## Decisões confirmadas pelo Tech Lead
 
 - Grupo 6: Caio Scandiuzzi Valente Coimbra (Tech Lead), Renildo da Silva Santos Junior (Product Owner) e Aldenir Rodrigues Almeida (Quality & Ops).
 - Problema: registros manuais e comunicação dispersa dificultam avisar moradores sobre encomendas e acompanhar problemas do condomínio até a solução.
@@ -8,7 +8,7 @@
 - IA proposta: estruturar relatos, resumir chamados e identificar informações faltantes, sempre com confirmação humana. Regras automáticas de aviso não são IA.
 - Artefatos a revisar: README, Lean Canvas, hipótese, PRD v0, AGENTS.md e diário. O PDF inicial é histórico e não comprova o escopo implementado posteriormente.
 
-Essas decisões estão documentadas, mas a concordância de cada integrante e o retorno do professor precisam de registros reais.
+Em 16/11/2026, Caio Scandiuzzi Valente Coimbra confirmou nesta conversa que essas definições já foram tomadas e solicitou seu encerramento documental. O aceite do Tech Lead fica registrado para problema, escopo, papéis, Lean Canvas, hipótese e PRD v0. Não se atribui esse aceite a outro integrante nem ao professor. A avaliação conceitual da proposta de IA está encerrada; sua validação experimental continua sendo uma atividade futura.
 
 ## Revisão humana da PR #5
 
@@ -37,8 +37,8 @@ Não enviar dados reais de moradores a um provedor de IA nesta avaliação.
 
 | Evidência | Registro real |
 | --- | --- |
-| Ratificação do problema, escopo e papéis pelo POD | Pendente: nomes, data e link/ata |
-| Aprovação de Lean Canvas, hipótese e PRD | Pendente: nome, data e revisão |
+| Definição do problema, escopo e papéis | Confirmada por Caio Scandiuzzi Valente Coimbra, Tech Lead, nesta conversa em 16/11/2026 |
+| Aceite documental de Lean Canvas, hipótese e PRD v0 | Confirmado por Caio nesta conversa em 16/11/2026; não equivale a revisão independente da PR |
 | Retorno do professor | Pendente: data, parecer e evidência |
 | Revisão técnica independente | Pendente: URL da revisão na PR |
 | Avaliação de IA | Não executada; não bloqueia a documentação da hipótese, mas não pode ser declarada validada |
