@@ -35,6 +35,19 @@ test('valida o contrato e remove campos não permitidos', () => {
   assert.equal(validateDeliveryEvent({ ...event, type: 'delivery.cancelled' }), null);
 });
 
+test('serve a central e todos os demos sem expor arquivos privados', async t => {
+  const baseUrl = await startServer(t);
+  for (const page of ['', 'index.html', 'acompanhamento-entregas.html', 'painel-sindico.html', 'demo-morador-sindico.html', 'onboarding.html', 'painel-comunicacao.html']) {
+    const response = await fetch(`${baseUrl}/${page}`);
+    assert.equal(response.status, 200, page);
+    assert.match(response.headers.get('content-type'), /text\/html/);
+    assert.match(await response.text(), /<!doctype html>/i);
+  }
+  for (const path of ['/delivery-server.mjs', '/.env', '/package.json', '/nao-existe.html']) {
+    assert.equal((await fetch(baseUrl + path)).status, 404, path);
+  }
+});
+
 test('não expõe a chave na configuração entregue ao navegador', async t => {
   const baseUrl = await startServer(t, {
     webhookUrl: 'https://n8n.example/webhook/delivery',

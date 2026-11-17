@@ -1,5 +1,23 @@
 # Portaria Fácil — Checkpoint 01
 
+## Painel operacional com PostgreSQL
+
+**Site publicado:** [Portaria Fácil no GPT Sites](https://portaria-facil-gestao.scannn.chatgpt.site), com acesso privado à conta autorizada no Sites e login adicional de operador. A fonte da adaptação hospedada está em [hosting/gpt-sites/](hosting/gpt-sites/README.md). Credenciais de acesso e do banco não são publicadas neste repositório.
+
+O novo site está em [web/](web/README.md), com login, moradores, síndicos, unidades, encomendas e chamados. Usa as tabelas existentes `public.moradores`, `public.responsaveis`, `public.encomendas` e `public.chamados`, preservando as chaves e cadastros. Há importação CSV/XLSX com prévia e confirmação.
+
+Na raiz do repositório: `npm.cmd ci`, configure o arquivo privado `.env` usando `web/.env.example`, execute `npm.cmd run web:setup` e `npm.cmd run web:start`. Acesse **http://127.0.0.1:4180**. Na instalação já configurada, use `iniciar-painel.ps1`.
+
+Build: `npm.cmd run web:build`. Testes: `npm.cmd run web:test`. Consulte o [guia do painel](web/README.md) para dados existentes, credenciais locais, importação e preparação para publicação. A central demonstrativa na porta 4173 continua sendo um projeto separado. O envio WhatsApp ainda não é disparado pelo novo painel.
+
+## Executar a apresentação
+
+Na raiz do repositório, execute `.\apresentar.ps1` e abra **http://127.0.0.1:4173**. O comando valida/empacota a demonstração, executa testes e inicia uma central com as cinco telas. Requer Node.js 24 ou superior; não exige instalar pacotes npm.
+
+Com npm disponível: `npm run build`, `npm test` e `npm run start:dist`.
+
+Consulte o [roteiro de apresentação](docs/APRESENTACAO.md) para a sequência de demonstração e os limites de integração. Os demos são independentes; envio real de WhatsApp não faz parte do fluxo local de entregas.
+
 Projeto do Grupo 6 no Bootcamp Software Engineering Project, MBA em Engenharia de Software da Faculdade Impacta.
 
 O Portaria Fácil propõe organizar o recebimento, o aviso ao morador e a retirada de encomendas em condomínios, com leitura assistida de etiquetas por IA e conferência humana.
@@ -26,9 +44,9 @@ Tema proposto: **Portaria Fácil — gestão de encomendas em condomínios**. Ra
 | --- | --- | --- |
 | Caio Scandiuzzi Valente Coimbra | Tech Lead | CaioScan |
 | Aldenir Rodrigues Almeida | Quality & Ops | AldenirRodrigues |
-| Renildo da Silva Santos Junior | Product Owner | A informar |
+| Renildo da Silva Santos Junior | Product Owner | Renildo-Junior |
 
-Responsabilidades dos papéis; Product Owner e Quality & Ops ainda a distribuir:
+Responsabilidades dos papéis definidos no Grupo 6:
 
 | Papel | Responsabilidade |
 | --- | --- |
@@ -38,7 +56,7 @@ Responsabilidades dos papéis; Product Owner e Quality & Ops ainda a distribuir:
 
 Todos participam das decisões, operam o agente e revisam PRs. Em aula, o trabalho será em mob, com rodízio de operador a cada 15–20 minutos. Cada PR precisa de revisão de outro integrante, e o limite será de duas PRs abertas simultaneamente, conforme os slides 62 e 67.
 
-## 3. Problema escolhido — proposta para ratificação
+## 3. Problema escolhido — confirmado pelo Tech Lead
 
 **Como reduzir o esforço de registrar encomendas e garantir que o morador possa tomar conhecimento da chegada, mesmo ausente, mantendo um histórico confiável da retirada?**
 
@@ -100,21 +118,43 @@ O fluxo de aviso discutido até aqui usa consulta periódica e popup no app aber
 
 O curso também exige fluxo em URL pública em uma etapa posterior. A dependência exclusiva de instalação de APK precisa ser avaliada no checkpoint de produto.
 
-## 7. Decisões necessárias para fechar hoje
+## 7. Situação das entregas e próximas ações
 
-- [x] Identificar os três integrantes do Grupo 6, conforme imagem enviada.
-- [x] Confirmar Caio Scandiuzzi Valente Coimbra como Tech Lead.
-- [x] Distribuir e confirmar Product Owner e Quality & Ops.
-- [ ] Ratificar o problema escolhido.
-- [ ] Revisar Lean Canvas, hipótese e PRD v0.
-- [ ] Avaliar a proposta de IA: avisos automáticos por regras, isoladamente, não caracterizam IA.
-- [x] Registrar a URL do repositório informada por Caio.
-- [ ] Adicionar os integrantes e o professor com os acessos adequados.
-- [ ] Configurar proteção da main, revisão por outro integrante e exigência de CI, conforme slide 71; a configuração não foi executada nesta entrega.
-- [x] Publicar os documentos em duas PRs para revisão.
-- [ ] Revisar e integrar as PRs após aprovação humana.
-- [ ] Registrar a revisão humana no diário.
-- [ ] Criar a tag `checkpoint-01` no commit aprovado, dentro do prazo da aula.
+Atualizado em **16/11/2026**, com consulta ao repositório. Itens concluídos representam entregas ou configurações verificadas; não equivalem à aprovação acadêmica.
+
+### Concluído
+
+- [x] Identificar os três integrantes e definir os papéis: Caio como Tech Lead, Renildo como Product Owner e Aldenir como Quality & Ops.
+- [x] Criar o repositório [CaioScan/PortariaFacil](https://github.com/CaioScan/PortariaFacil).
+- [x] Conceder acesso ao professor `marcusvas` e aos integrantes `AldenirRodrigues` e `Renildo-Junior`, além do proprietário `CaioScan`.
+- [x] Documentar o problema, os processos e o escopo de avisos de encomendas e chamados do condomínio.
+- [x] Elaborar e atualizar Lean Canvas, hipótese de valor e PRD v0, com critérios de aceite.
+- [x] Definir a hipótese de IA para estruturar relatos e solicitar informações faltantes; avisos automáticos isolados não são apresentados como IA.
+- [x] Publicar os documentos e os demos e integrar as PRs [#1](https://github.com/CaioScan/PortariaFacil/pull/1), [#2](https://github.com/CaioScan/PortariaFacil/pull/2), [#3](https://github.com/CaioScan/PortariaFacil/pull/3) e [#4](https://github.com/CaioScan/PortariaFacil/pull/4).
+- [x] Versionar o diário agêntico e registrar atividades, limitações e intervenções do proponente.
+- [x] Disponibilizar o [painel no GPT Sites](https://portaria-facil-gestao.scannn.chatgpt.site), com acesso privado e banco PostgreSQL existente.
+
+### Decisões confirmadas pelo Tech Lead
+
+- [x] Registrar a confirmação de Caio Scandiuzzi Valente Coimbra de que integrantes, papéis, problema e escopo já foram definidos.
+- [x] Registrar o aceite documental de Caio para Lean Canvas, hipótese e PRD v0, conforme sua confirmação nesta conversa em 16/11/2026.
+- [x] Avaliar a proposta de IA no nível do checkpoint: estruturação de relatos, resumo e identificação de informações faltantes com conferência humana. Avisos por regras não caracterizam IA. A decisão conceitual está encerrada; implementação e validação prática são etapas posteriores.
+- [x] Registrar essa intervenção humana no diário, sem atribuir aprovação a outros integrantes ou ao professor.
+
+### Execução e validações posteriores
+
+- [ ] Obter e registrar o retorno do professor; não é uma decisão interna ainda em aberto.
+- [ ] Validar a utilidade da IA com usuários e executar sua avaliação no fluxo do produto. A hipótese está documentada; a integração de IA ao painel ainda está pendente.
+- [ ] Revisar a [PR #5 — Painel PostgreSQL e GPT Sites](https://github.com/CaioScan/PortariaFacil/pull/5), ainda aberta nesta conferência.
+- [ ] Registrar a revisão técnica independente da PR #5 no GitHub. O aceite documental do Tech Lead já está no diário; ele não substitui a revisão de outro integrante exigida para merge.
+
+### Configurações concluídas e publicação do marco
+
+- [x] Proteger a `main`: uma aprovação de outro integrante, descarte de aprovações após novos commits, resolução de conversas e bloqueio de force push e exclusão. As regras também se aplicam ao administrador.
+- [x] Configurar o workflow `CI` e exigir o check `ci` com branch atualizada antes do merge. O workflow testa os demos, o painel e os builds local e GPT Sites, sem acesso ao banco real. A integração PostgreSQL é verificada separadamente; esse teste é ignorado no CI sem `DATABASE_URL`.
+- [ ] Definir com o grupo/professor o commit de referência e criar a tag `checkpoint-01`. Não há tags no repositório nesta conferência. A data e a evidência reais devem ser registradas, sem declarar retroativamente cumprimento do prazo da aula.
+
+O roteiro para concluir as aprovações, registrar a avaliação de IA e publicar a tag está em [Fechamento do checkpoint](docs/governanca/fechamento-checkpoint-01.md). Aprovação acadêmica e revisão por outro integrante não podem ser substituídas pelo agente ou pelo autor da PR.
 
 ## 8. Referências do material da disciplina
 
