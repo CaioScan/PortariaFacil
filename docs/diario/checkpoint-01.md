@@ -46,3 +46,11 @@ O proponente solicitou a atualização do checklist do README. Na consulta ao Gi
 As PRs #1 a #4 estavam integradas, e a PR #5 permanecia aberta. Não havia revisões registradas nas PRs #1 e #2, tag de checkpoint, proteção da main ou workflows de GitHub Actions. O README foi ajustado para separar entregas verificadas de aprovação humana e de configurações ainda pendentes. As seções anteriores deste diário preservam o contexto histórico da preparação inicial; não descrevem o estado atual das PRs.
 
 Esta conferência não registra aprovação do professor, não configura regras do GitHub nem cria tags.
+
+## Execução das configurações — 16/11/2026
+
+Após nova solicitação de Caio para finalizar as pendências, o agente configurou a proteção da main: uma aprovação independente obrigatória, invalidação de aprovações após novos commits, conversas resolvidas e check `ci` obrigatório com branch atualizada. Administradores também estão sujeitos às regras; exclusão e force push estão bloqueados. A API confirmou a aplicação.
+
+Foi preparado o workflow CI com Node 24, instalação pelos lockfiles, testes e builds dos demos, painel e cópia do GPT Sites. O CI não recebe credenciais reais e ignora explicitamente a integração PostgreSQL quando não há DATABASE_URL. Os testes locais com banco usam schema temporário isolado.
+
+O roteiro docs/governanca/fechamento-checkpoint-01.md consolida decisões, checklist de revisão, plano de avaliação de IA e procedimento de tag. Aprovações, entrevistas, avaliação de IA, parecer do professor e cumprimento do prazo original não foram inventados. Merge e tag dependem de revisão independente e definição humana do commit aprovado; não foram antecipados.

@@ -144,9 +144,11 @@ Atualizado em **16/11/2026**, com consulta ao repositório. Itens concluídos re
 
 ### Pendente de configuração do repositório
 
-- [ ] Proteger a `main` e exigir revisão de outro integrante antes do merge. A API do GitHub informou que a branch ainda não está protegida.
-- [ ] Configurar o CI e exigir sua aprovação antes do merge. Não foram encontrados workflows do GitHub Actions; testes locais não substituem essa configuração.
+- [x] Proteger a `main`: uma aprovação de outro integrante, descarte de aprovações após novos commits, resolução de conversas e bloqueio de force push e exclusão. As regras também se aplicam ao administrador.
+- [x] Configurar o workflow `CI` e exigir o check `ci` com branch atualizada antes do merge. O workflow testa os demos, o painel e os builds local e GPT Sites, sem acesso ao banco real. A integração PostgreSQL é verificada separadamente; esse teste é ignorado no CI sem `DATABASE_URL`.
 - [ ] Definir com o grupo/professor o commit de referência e criar a tag `checkpoint-01`. Não há tags no repositório nesta conferência. A data e a evidência reais devem ser registradas, sem declarar retroativamente cumprimento do prazo da aula.
+
+O roteiro para concluir as aprovações, registrar a avaliação de IA e publicar a tag está em [Fechamento do checkpoint](docs/governanca/fechamento-checkpoint-01.md). Aprovação acadêmica e revisão por outro integrante não podem ser substituídas pelo agente ou pelo autor da PR.
 
 ## 8. Referências do material da disciplina
 
