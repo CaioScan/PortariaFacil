@@ -1,0 +1,26 @@
+{
+  "name": "portaria-facil-demonstracao",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "web:setup": "node --env-file=.env web/setup.mjs",
+    "web:build": "node scripts/build-web.mjs",
+    "web:start": "node --env-file=.env web/server.mjs",
+    "web:start:dist": "node --env-file=.env dist/painel/web/server.mjs",
+    "web:test": "node --env-file-if-exists=.env --test web/tests/*.test.mjs",
+    "web:check": "node --check web/server.mjs && node --check web/public/app.js",
+    "build": "node scripts/build.mjs",
+    "test": "node --test prototype/delivery-server.test.mjs whatsapp-estudos-export/waha/bridge.test.mjs",
+    "start": "node prototype/delivery-server.mjs",
+    "start:dist": "node dist/prototype/delivery-server.mjs",
+    "demo": "npm run build && npm test && npm start"
+  },
+  "dependencies": {
+    "pg": "^8.23.1",
+    "read-excel-file": "^9.3.17"
+  }
+}

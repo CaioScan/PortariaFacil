@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Portaria Fácil | Central de apresentação</title>
+  <style>
+    :root { color-scheme: light; font-family: 'Segoe UI', sans-serif; color: #183c36; background: #eef4f2; }
+    * { box-sizing: border-box; }
+    body { margin: 0; }
+    header { display: flex; justify-content: space-between; align-items: center; gap: 24px; padding: 20px 28px; background: #174c42; color: white; }
+    header h1 { margin: 0; font-size: 24px; letter-spacing: -.6px; }
+    header p { margin: 4px 0 0; color: #cde4dd; font-size: 14px; }
+    #connection { font-size: 13px; max-width: 340px; }
+    main { display: grid; grid-template-columns: 260px minmax(0, 1fr); min-height: calc(100vh - 94px); }
+    aside { padding: 24px 16px; border-right: 1px solid #cbdcd6; background: #f7faf8; }
+    nav { display: grid; gap: 6px; }
+    button { text-align: left; border: 1px solid transparent; border-radius: 7px; padding: 13px; background: transparent; color: #23473e; font: inherit; cursor: pointer; }
+    button small { display: block; font-size: 12px; margin-top: 4px; color: #4c6860; }
+    button:hover { background: #e3eeea; }
+    button[aria-pressed="true"] { background: #dbeee6; border-color: #729e8d; font-weight: 600; }
+    :focus-visible { outline: 3px solid #b06d18; outline-offset: 3px; }
+    aside p { font-size: 13px; line-height: 1.6; margin: 24px 12px; }
+    section { min-width: 0; display: flex; flex-direction: column; }
+    .toolbar { padding: 16px 24px; background: white; border-bottom: 1px solid #cbdcd6; display: flex; gap: 16px; justify-content: space-between; align-items: center; }
+    .toolbar h2 { font-size: 18px; margin: 0 0 4px; }
+    .toolbar p { font-size: 13px; color: #4c6860; margin: 0; max-width: 76ch; }
+    a { color: #146650; font-weight: 600; white-space: nowrap; }
+    iframe { width: 100%; flex: 1; min-height: 760px; border: 0; background: white; }
+    @media (max-width: 800px) { header { align-items: flex-start; flex-direction: column; gap: 10px; padding: 18px; } main { grid-template-columns: 1fr; } aside { border-right: 0; padding: 12px; } nav { grid-template-columns: repeat(2, minmax(0, 1fr)); } aside p { margin: 12px; } .toolbar { padding: 16px; } }
+  </style>
+</head>
+<body>
+  <header>
+    <div><h1>Portaria Fácil</h1><p>Grupo 6 · Encomendas e atendimento do condomínio</p></div>
+    <span id="connection" role="status">Verificando configuração do servidor…</span>
+  </header>
+  <main>
+    <aside>
+      <nav aria-label="Demonstrações">
+        <button type="button" data-page="acompanhamento-entregas.html" aria-pressed="true">Entregas<small>Registrar, reavisar e retirar</small></button>
+        <button type="button" data-page="demo-morador-sindico.html" aria-pressed="false">Morador e chamados<small>Conversa e protocolo simulados</small></button>
+        <button type="button" data-page="painel-sindico.html" aria-pressed="false">Painel do síndico<small>Triagem e acompanhamento</small></button>
+        <button type="button" data-page="onboarding.html" aria-pressed="false">Cadastro do condomínio<small>Configuração demonstrativa</small></button>
+        <button type="button" data-page="painel-comunicacao.html" aria-pressed="false">Comunicação<small>Avisos e mural de exemplo</small></button>
+      </nav>
+      <p>Use dados fictícios. As telas são demos independentes: uma ação em uma tela não atualiza as outras. Entregas ficam neste navegador; os demais demos usam memória da página.</p>
+      <p>Reservas, financeiro e comunicação coletiva são possibilidades futuras. O WhatsApp real ainda não está conectado ao fluxo de encomendas e chamados.</p>
+    </aside>
+    <section aria-label="Tela selecionada">
+      <div class="toolbar">
+        <div><h2 id="pageTitle">Entregas</h2><p id="pageDescription">Registro e retirada no navegador. O n8n opcional confirma eventos; não envia WhatsApp.</p></div>
+        <a id="openPage" href="/acompanhamento-entregas.html" target="_blank" rel="noopener">Abrir separado</a>
+      </div>
+      <iframe id="demo" src="/acompanhamento-entregas.html" title="Demonstração de entregas"></iframe>
+    </section>
+  </main>
+  <script>
+    const descriptions = {
+      'acompanhamento-entregas.html': 'Registro e retirada no navegador. O n8n opcional confirma eventos; não envia WhatsApp.',
+      'demo-morador-sindico.html': 'Conversa roteirizada e painel na mesma tela. Protocolos e retornos são simulados.',
+      'painel-sindico.html': 'Dados de exemplo e alterações em memória. Indicadores não representam medições reais.',
+      'onboarding.html': 'Conexões simuladas. Preenchimento por IA depende do ambiente original; use o formulário manual.',
+      'painel-comunicacao.html': 'Publicação e aprovação simuladas. Nenhuma mensagem é enviada ao WhatsApp.'
+    };
+    for (const button of document.querySelectorAll('[data-page]')) {
+      button.addEventListener('click', () => {
+        for (const item of document.querySelectorAll('[data-page]')) item.setAttribute('aria-pressed', String(item === button));
+        const title = button.firstChild.textContent.trim();
+        document.getElementById('pageTitle').textContent = title;
+        document.getElementById('pageDescription').textContent = descriptions[button.dataset.page];
+        document.getElementById('demo').src = '/' + button.dataset.page;
+        document.getElementById('demo').title = 'Demonstração: ' + title;
+        document.getElementById('openPage').href = '/' + button.dataset.page;
+      });
+    }
+    fetch('/api/config').then(response => {
+      if (!response.ok) throw new Error('Configuração indisponível');
+      return response.json();
+    }).then(config => {
+      document.getElementById('connection').textContent = config.n8nConfigured
+        ? 'Servidor local ativo · n8n configurado, conexão ainda não verificada'
+        : 'Servidor local ativo · modo demonstrativo, sem envio externo';
+    }).catch(() => { document.getElementById('connection').textContent = 'Inicie o servidor para verificar a configuração.'; });
+  </script>
+</body>
+</html>
