@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main, feat/painel-postgresql-sites]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    name: ci
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            hosting/gpt-sites/package-lock.json
+      - run: npm ci
+      - run: npm test
+      - run: npm run web:check
+      - name: Testes do painel sem acesso ao banco real
+        run: npm run web:test
+      - run: npm run build
+      - run: npm run web:build
+      - name: Instalar dependências do GPT Sites
+        run: npm ci
+        working-directory: hosting/gpt-sites
+      - run: npm run check && npm run build
+        working-directory: hosting/gpt-sites

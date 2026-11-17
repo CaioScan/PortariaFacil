@@ -2,7 +2,10 @@ import http from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 
-const pagePath = fileURLToPath(new URL('./acompanhamento-entregas.html', import.meta.url));
+const pageRoutes = new Map([
+  ['/', 'index.html'],
+  ...['index.html', 'acompanhamento-entregas.html', 'painel-sindico.html', 'demo-morador-sindico.html', 'onboarding.html', 'painel-comunicacao.html'].map(page => [`/${page}`, page]),
+]);
 const maxBodyBytes = 16 * 1024;
 const maxResponseBytes = 8 * 1024;
 
@@ -120,9 +123,9 @@ export function createDeliveryServer({
       return sendJson(response, 200, { n8nConfigured: Boolean(target) });
     }
 
-    if (request.method === 'GET' && ['/','/acompanhamento-entregas.html'].includes(request.url)) {
+    if (request.method === 'GET' && pageRoutes.has(request.url)) {
       try {
-        const page = await readFile(pagePath);
+        const page = await readFile(new URL(pageRoutes.get(request.url), import.meta.url));
         response.writeHead(200, {
           'Content-Type': 'text/html; charset=utf-8',
           'Cache-Control': 'no-store',
@@ -183,6 +186,12 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
   const server = createDeliveryServer({
     webhookUrl: process.env.N8N_DELIVERY_WEBHOOK_URL || '',
     webhookKey: process.env.N8N_DELIVERY_WEBHOOK_KEY || '',
+  });
+  server.on('error', error => {
+    console.error(error.code === 'EADDRINUSE'
+      ? `A porta ${port} já está em uso. Abra o serviço existente ou defina PORT com outra porta.`
+      : `Falha ao iniciar: ${error.message}`);
+    process.exitCode = 1;
   });
   server.listen(port, '127.0.0.1', () => {
     console.log(`Protótipo disponível em http://127.0.0.1:${port}`);

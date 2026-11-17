@@ -38,3 +38,25 @@ As PRs serão mantidas abertas, sem merge e sem tag de checkpoint, aguardando re
 | Correções solicitadas ao agente | [preencher com ocorrências reais] |
 | Evidência das PRs revisadas | [links após abertura e revisão] |
 | Commit e tag do checkpoint | [preencher após integração] |
+
+## Conferência posterior — 16/11/2026
+
+O proponente solicitou a atualização do checklist do README. Na consulta ao GitHub, foram confirmados os colaboradores `CaioScan`, `AldenirRodrigues`, `Renildo-Junior` e o professor `marcusvas`. Os papéis registrados no README são Tech Lead, Quality & Ops e Product Owner, respectivamente para Caio, Aldenir e Renildo.
+
+As PRs #1 a #4 estavam integradas, e a PR #5 permanecia aberta. Não havia revisões registradas nas PRs #1 e #2, tag de checkpoint, proteção da main ou workflows de GitHub Actions. O README foi ajustado para separar entregas verificadas de aprovação humana e de configurações ainda pendentes. As seções anteriores deste diário preservam o contexto histórico da preparação inicial; não descrevem o estado atual das PRs.
+
+Esta conferência não registra aprovação do professor, não configura regras do GitHub nem cria tags.
+
+## Execução das configurações — 16/11/2026
+
+Após nova solicitação de Caio para finalizar as pendências, o agente configurou a proteção da main: uma aprovação independente obrigatória, invalidação de aprovações após novos commits, conversas resolvidas e check `ci` obrigatório com branch atualizada. Administradores também estão sujeitos às regras; exclusão e force push estão bloqueados. A API confirmou a aplicação.
+
+Foi preparado o workflow CI com Node 24, instalação pelos lockfiles, testes e builds dos demos, painel e cópia do GPT Sites. O CI não recebe credenciais reais e ignora explicitamente a integração PostgreSQL quando não há DATABASE_URL. Os testes locais com banco usam schema temporário isolado.
+
+O roteiro docs/governanca/fechamento-checkpoint-01.md consolida decisões, checklist de revisão, plano de avaliação de IA e procedimento de tag. Aprovações, entrevistas, avaliação de IA, parecer do professor e cumprimento do prazo original não foram inventados. Merge e tag dependem de revisão independente e definição humana do commit aprovado; não foram antecipados.
+
+## Confirmação humana das definições — 16/11/2026
+
+Caio Scandiuzzi Valente Coimbra, Tech Lead, informou nesta conversa: "precisa finalizar isso tambem pq ja foi definido", referindo-se ao checklist das decisões do checkpoint. O agente registrou essa confirmação como aceite documental do proponente para integrantes, papéis, problema, escopo, Lean Canvas, hipótese, PRD v0 e proposta conceitual de IA.
+
+O ajuste solicitado foi retirar a apresentação dessas decisões como indefinidas e separar decisões concluídas de execução técnica posterior. A cópia acadêmica local ainda continha o checklist antigo e também foi corrigida. Não houve declaração de testes de IA, aprovação do professor ou revisão por outra pessoa. A PR #5 permanece sujeita à revisão independente exigida pela proteção da main; a tag não será publicada como se essa revisão já tivesse ocorrido.

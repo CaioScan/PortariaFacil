@@ -1,0 +1,12 @@
+import {Miniflare,convertV4MiniflareOptions}from 'miniflare';
+import {createInterface}from 'node:readline';
+import {once}from 'node:events';
+import {fileURLToPath}from 'node:url';
+console.log('Ready for private preview bindings on stdin.');
+if(process.stdin.isTTY)process.stdin.setRawMode(true);
+const input=createInterface({input:process.stdin,terminal:false});
+const [line]=await once(input,'line');input.close();
+const env=JSON.parse(line);
+const runtime=new Miniflare(convertV4MiniflareOptions({workers:[{name:'portaria-facil',modules:true,scriptPath:fileURLToPath(new URL('../dist/server/index.js',import.meta.url)),compatibilityDate:'2026-11-16',compatibilityFlags:['nodejs_compat'],bindings:env}],host:'127.0.0.1',port:4183}));
+console.log('Preview Worker:',String(await runtime.ready));
+for(const signal of ['SIGINT','SIGTERM'])process.on(signal,async()=>{await runtime.dispose();process.exit(0);});
