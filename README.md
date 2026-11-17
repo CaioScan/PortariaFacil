@@ -56,7 +56,7 @@ Responsabilidades dos papéis definidos no Grupo 6:
 
 Todos participam das decisões, operam o agente e revisam PRs. Em aula, o trabalho será em mob, com rodízio de operador a cada 15–20 minutos. Cada PR precisa de revisão de outro integrante, e o limite será de duas PRs abertas simultaneamente, conforme os slides 62 e 67.
 
-## 3. Problema escolhido — proposta para ratificação
+## 3. Problema escolhido — confirmado pelo Tech Lead
 
 **Como reduzir o esforço de registrar encomendas e garantir que o morador possa tomar conhecimento da chegada, mesmo ausente, mantendo um histórico confiável da retirada?**
 
@@ -134,15 +134,21 @@ Atualizado em **16/11/2026**, com consulta ao repositório. Itens concluídos re
 - [x] Versionar o diário agêntico e registrar atividades, limitações e intervenções do proponente.
 - [x] Disponibilizar o [painel no GPT Sites](https://portaria-facil-gestao.scannn.chatgpt.site), com acesso privado e banco PostgreSQL existente.
 
-### Pendente de decisão ou validação humana
+### Decisões confirmadas pelo Tech Lead
 
-- [ ] Registrar a ratificação do problema e do escopo pelo POD e o retorno do professor.
-- [ ] Registrar a aprovação humana de Lean Canvas, hipótese e PRD; elaboração e merge não comprovam essa aprovação.
+- [x] Registrar a confirmação de Caio Scandiuzzi Valente Coimbra de que integrantes, papéis, problema e escopo já foram definidos.
+- [x] Registrar o aceite documental de Caio para Lean Canvas, hipótese e PRD v0, conforme sua confirmação nesta conversa em 16/11/2026.
+- [x] Avaliar a proposta de IA no nível do checkpoint: estruturação de relatos, resumo e identificação de informações faltantes com conferência humana. Avisos por regras não caracterizam IA. A decisão conceitual está encerrada; implementação e validação prática são etapas posteriores.
+- [x] Registrar essa intervenção humana no diário, sem atribuir aprovação a outros integrantes ou ao professor.
+
+### Execução e validações posteriores
+
+- [ ] Obter e registrar o retorno do professor; não é uma decisão interna ainda em aberto.
 - [ ] Validar a utilidade da IA com usuários e executar sua avaliação no fluxo do produto. A hipótese está documentada; a integração de IA ao painel ainda está pendente.
 - [ ] Revisar a [PR #5 — Painel PostgreSQL e GPT Sites](https://github.com/CaioScan/PortariaFacil/pull/5), ainda aberta nesta conferência.
-- [ ] Registrar no diário quem revisou, o que foi aprovado e quais ajustes foram solicitados. As PRs #1 e #2 não possuem revisões registradas no GitHub nesta conferência.
+- [ ] Registrar a revisão técnica independente da PR #5 no GitHub. O aceite documental do Tech Lead já está no diário; ele não substitui a revisão de outro integrante exigida para merge.
 
-### Pendente de configuração do repositório
+### Configurações concluídas e publicação do marco
 
 - [x] Proteger a `main`: uma aprovação de outro integrante, descarte de aprovações após novos commits, resolução de conversas e bloqueio de force push e exclusão. As regras também se aplicam ao administrador.
 - [x] Configurar o workflow `CI` e exigir o check `ci` com branch atualizada antes do merge. O workflow testa os demos, o painel e os builds local e GPT Sites, sem acesso ao banco real. A integração PostgreSQL é verificada separadamente; esse teste é ignorado no CI sem `DATABASE_URL`.
