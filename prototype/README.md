@@ -12,6 +12,8 @@ Protótipos HTML fornecidos pelo proponente para discussão da experiência. O n
 
 ## Visualização
 
+Para apresentar todas as telas juntas, execute `.\apresentar.ps1` na raiz do repositório e abra **http://127.0.0.1:4173**. O script gera o pacote e executa os testes antes de iniciar o servidor. Veja o [roteiro](../docs/APRESENTACAO.md).
+
 O GitHub mostra o código dos HTMLs. Para interagir, baixe cada arquivo pelo botão **Download raw file** ou baixe o repositório e abra os HTMLs no navegador. As simulações locais não exigem instalação de dependências.
 
 Veja também a [explicação de como funciona o acompanhamento de entregas e sua integração com o n8n](./COMO-FUNCIONA.md).
@@ -22,7 +24,7 @@ Para iniciar o acompanhamento de entregas com a API local, use Node.js 24 ou sup
 node prototype/delivery-server.mjs
 ```
 
-Abra `http://127.0.0.1:4173`. Sem configuração, o painel usa dados demonstrativos e não envia avisos. As alterações ficam no armazenamento local do navegador.
+Abra `http://127.0.0.1:4173` para a central ou `http://127.0.0.1:4173/acompanhamento-entregas.html` para entregas diretamente. Sem configuração, o painel usa dados demonstrativos e não envia avisos. As alterações ficam no armazenamento local do navegador.
 
 ### Integração n8n
 

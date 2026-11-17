@@ -1,5 +1,23 @@
 # Portaria Fácil — Checkpoint 01
 
+## Painel operacional com PostgreSQL
+
+**Site publicado:** [Portaria Fácil no GPT Sites](https://portaria-facil-gestao.scannn.chatgpt.site), com acesso privado à conta autorizada no Sites e login adicional de operador. A fonte da adaptação hospedada está em [hosting/gpt-sites/](hosting/gpt-sites/README.md). Credenciais de acesso e do banco não são publicadas neste repositório.
+
+O novo site está em [web/](web/README.md), com login, moradores, síndicos, unidades, encomendas e chamados. Usa as tabelas existentes `public.moradores`, `public.responsaveis`, `public.encomendas` e `public.chamados`, preservando as chaves e cadastros. Há importação CSV/XLSX com prévia e confirmação.
+
+Na raiz do repositório: `npm.cmd ci`, configure o arquivo privado `.env` usando `web/.env.example`, execute `npm.cmd run web:setup` e `npm.cmd run web:start`. Acesse **http://127.0.0.1:4180**. Na instalação já configurada, use `iniciar-painel.ps1`.
+
+Build: `npm.cmd run web:build`. Testes: `npm.cmd run web:test`. Consulte o [guia do painel](web/README.md) para dados existentes, credenciais locais, importação e preparação para publicação. A central demonstrativa na porta 4173 continua sendo um projeto separado. O envio WhatsApp ainda não é disparado pelo novo painel.
+
+## Executar a apresentação
+
+Na raiz do repositório, execute `.\apresentar.ps1` e abra **http://127.0.0.1:4173**. O comando valida/empacota a demonstração, executa testes e inicia uma central com as cinco telas. Requer Node.js 24 ou superior; não exige instalar pacotes npm.
+
+Com npm disponível: `npm run build`, `npm test` e `npm run start:dist`.
+
+Consulte o [roteiro de apresentação](docs/APRESENTACAO.md) para a sequência de demonstração e os limites de integração. Os demos são independentes; envio real de WhatsApp não faz parte do fluxo local de entregas.
+
 Projeto do Grupo 6 no Bootcamp Software Engineering Project, MBA em Engenharia de Software da Faculdade Impacta.
 
 O Portaria Fácil propõe organizar o recebimento, o aviso ao morador e a retirada de encomendas em condomínios, com leitura assistida de etiquetas por IA e conferência humana.
