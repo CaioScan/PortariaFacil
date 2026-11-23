@@ -1,0 +1,124 @@
+version: "3.9"
+
+services:
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    restart: unless-stopped
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?Configure REDIS_PASSWORD no .env privado}
+    command: ["sh", "-c", "exec redis-server --requirepass \"$$REDIS_PASSWORD\""]
+    ports:
+      - "127.0.0.1:6379:6379"
+    networks:
+      - automation
+
+  postgres:
+    image: postgres:16
+    container_name: postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: default
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Configure POSTGRES_PASSWORD no .env privado}
+      POSTGRES_DB: default
+    ports:
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U default -d default"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    networks:
+      - automation
+
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: n8n
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:5678:5678"
+    environment:
+
+      TZ: America/Sao_Paulo
+      GENERIC_TIMEZONE: America/Sao_Paulo
+
+      N8N_HOST: n8n
+      N8N_PORT: 5678
+      N8N_PROTOCOL: http
+      WEBHOOK_URL: http://n8n:5678/
+
+      N8N_SECURE_COOKIE: "false"
+      N8N_LOG_LEVEL: info
+
+      DB_TYPE: postgresdb
+      DB_POSTGRESDB_HOST: postgres
+      DB_POSTGRESDB_PORT: 5432
+      DB_POSTGRESDB_DATABASE: default
+      DB_POSTGRESDB_USER: default
+      DB_POSTGRESDB_PASSWORD: ${POSTGRES_PASSWORD:?Configure POSTGRES_PASSWORD no .env privado}
+
+      N8N_COMMUNITY_PACKAGES_ALLOW_TOOL_USAGE: "true"
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "wget -q --spider http://localhost:5678/healthz || exit 1"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+    volumes:
+      - n8n_data:/home/node/.n8n
+
+    networks:
+      - automation
+
+  waha:
+    image: devlikeapro/waha:latest
+    container_name: waha
+    restart: unless-stopped
+
+    dns:
+      - 1.1.1.1
+      - 8.8.8.8
+
+    environment:
+      TZ: America/Sao_Paulo
+      WHATSAPP_DEFAULT_ENGINE: GOWS
+      WHATSAPP_API_KEY: ${WHATSAPP_API_KEY:?Configure WHATSAPP_API_KEY no .env privado}
+      WHATSAPP_HOOK_URL: http://n8n:5678/
+      WAHA_DASHBOARD_USERNAME: admin
+      WAHA_DASHBOARD_PASSWORD: ${WAHA_DASHBOARD_PASSWORD:?Configure WAHA_DASHBOARD_PASSWORD no .env privado}
+
+    ports:
+      - "127.0.0.1:3000:3000"
+
+    volumes:
+      - waha_sessions:/app/.sessions
+      - waha_media:/app/.media
+
+    depends_on:
+      n8n:
+        condition: service_healthy
+
+    networks:
+      - automation
+
+volumes:
+  pgdata:
+  n8n_data:
+  waha_sessions:
+  waha_media:
+
+networks:
+  automation:
+    driver: bridge

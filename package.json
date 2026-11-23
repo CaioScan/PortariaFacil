@@ -14,7 +14,7 @@
     "web:test": "node --env-file-if-exists=.env --test web/tests/*.test.mjs",
     "web:check": "node --check web/server.mjs && node --check web/public/app.js",
     "build": "node scripts/build.mjs",
-    "test": "node --test prototype/delivery-server.test.mjs whatsapp-estudos-export/waha/bridge.test.mjs",
+    "test": "node --test prototype/delivery-server.test.mjs whatsapp-estudos-export/waha/bridge.test.mjs schedule_n8n/seguranca.test.mjs",
     "start": "node prototype/delivery-server.mjs",
     "start:dist": "node dist/prototype/delivery-server.mjs",
     "demo": "npm run build && npm test && npm start"

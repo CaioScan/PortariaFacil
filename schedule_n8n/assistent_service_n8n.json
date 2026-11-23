@@ -1,0 +1,2814 @@
+{
+  "name": "Registro Encomenda",
+  "nodes": [
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "if-encomenda-aberta",
+              "leftValue": "={{ Boolean($json.protocolo) }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        3392,
+        816
+      ],
+      "id": "41b43027-e078-4535-9f3e-7bff35046b7a",
+      "name": "Encomenda Aberta?"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH atualizado AS (\n  UPDATE public.encomendas e\n  SET status=CASE WHEN $2='confirmar_retirada' THEN 'RETIRADA' ELSE e.status END,\n    data_retirada=CASE WHEN $2='confirmar_retirada' THEN NOW() ELSE e.data_retirada END,\n    updated_at=NOW()\n  WHERE e.protocolo=$1::uuid AND e.status='AGUARDANDO_RETIRADA'\n    AND $2 IN ('confirmar_leitura','confirmar_retirada')\n    AND e.codigo_retirada=$4 AND $3 ~ '^55[0-9]{10,11}$'\n    AND (SELECT count(*) FROM public.moradores m\n      WHERE m.ativo=true AND CASE WHEN length(regexp_replace(m.whatsapp, '[^0-9]', '', 'g')) IN (10,11)\n  THEN '55' || regexp_replace(m.whatsapp, '[^0-9]', '', 'g')\n  ELSE regexp_replace(m.whatsapp, '[^0-9]', '', 'g') END=$3)=1\n    AND EXISTS (SELECT 1 FROM public.moradores m\n      WHERE m.ativo=true AND m.bloco=e.morador_bloco\n        AND m.andar=e.morador_andar AND m.apartamento=e.morador_apartamento\n        AND CASE WHEN length(regexp_replace(m.whatsapp, '[^0-9]', '', 'g')) IN (10,11)\n  THEN '55' || regexp_replace(m.whatsapp, '[^0-9]', '', 'g')\n  ELSE regexp_replace(m.whatsapp, '[^0-9]', '', 'g') END=$3)\n  RETURNING e.protocolo,e.codigo_retirada,e.status,e.destinatario_nome,\n    e.morador_bloco,e.morador_andar,e.morador_apartamento\n) SELECT * FROM atualizado;",
+        "options": {
+          "queryReplacement": "={{ [ $('Buscar Encomenda Pendente').item.json.protocolo, $('Parse_Encomenda_Resposta').item.json.acao, $('Parse_Encomenda_Resposta').item.json.morador_whatsapp, $('Buscar Encomenda Pendente').item.json.codigo_retirada ] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        3616,
+        720
+      ],
+      "id": "3435a62f-8558-44f0-bc13-8d05fed4dde4",
+      "name": "Registrar Evento Resposta",
+      "credentials": {
+        "postgres": {
+          "id": "RShdjD2hVLmjIyBj",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "Chatting",
+        "operation": "Send Text",
+        "session": "={{ $('Parse_Encomenda_Resposta').item.json.session || 'default' }}",
+        "chatId": "={{ $('Parse_Encomenda_Resposta').item.json.chat_id }}",
+        "text": "={{ $('Parse_Encomenda_Resposta').item.json.acao === 'confirmar_retirada'\n  ? `Retirada confirmada! ✅\\n\\nA encomenda (código *${$json.codigo_retirada}*) da unidade *Bloco ${$json.morador_bloco} - Apto ${$json.morador_apartamento}* foi baixada no sistema da portaria.`\n  : `Leitura confirmada! 👍\\n\\nSua encomenda (código *${$json.codigo_retirada}*) continua disponível para retirada na portaria.` }}",
+        "requestOptions": {}
+      },
+      "type": "n8n-nodes-waha.WAHA",
+      "typeVersion": 202411,
+      "position": [
+        3840,
+        720
+      ],
+      "id": "5f1b19d8-1d56-480e-aef3-2540cbef5aea",
+      "name": "Confirmar ao Morador",
+      "credentials": {
+        "wahaApi": {
+          "id": "PQRcGzgOgnmLCusF",
+          "name": "WAHA account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO public.eventos_metricas (fluxo, metrica, valor_texto)\nVALUES ('encomenda', 'resposta_sem_encomenda', NULLIF(trim($1), ''))\nRETURNING *;",
+        "options": {
+          "queryReplacement": "={{ [\n  $('Parse_Encomenda_Resposta').first()?.json?.morador_whatsapp ||\n  $('Normalizar Webhook').first()?.json?.morador_whatsapp ||\n  $('Parse_Encomenda_Resposta').first()?.json?.chat_id ||\n  $('Normalizar Webhook').first()?.json?.chat_id ||\n  'desconhecido'\n] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        3616,
+        944
+      ],
+      "id": "564a5c94-153d-46ca-a8ff-07dc05a3b06d",
+      "name": "Metrica Sem Correspondencia",
+      "credentials": {
+        "postgres": {
+          "id": "RShdjD2hVLmjIyBj",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "Chatting",
+        "operation": "Send Text",
+        "session": "={{ $('Parse_Encomenda_Resposta').item.json.session || 'default' }}",
+        "chatId": "={{ $('Parse_Encomenda_Resposta').item.json.chat_id }}",
+        "text": "Não foi possível identificar uma única encomenda pendente sua. Envie RETIREI seguido do código ou do protocolo da encomenda. Se não houver encomenda vinculada ao seu cadastro, procure a portaria. Nenhuma retirada foi registrada.",
+        "requestOptions": {}
+      },
+      "type": "n8n-nodes-waha.WAHA",
+      "typeVersion": 202411,
+      "position": [
+        3840,
+        944
+      ],
+      "id": "1a0c66cc-07fa-4b53-bd5a-9d8263f792ef",
+      "name": "Morador Sem Encomenda",
+      "credentials": {
+        "wahaApi": {
+          "id": "PQRcGzgOgnmLCusF",
+          "name": "WAHA account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "2cf1181f-ef34-4996-8432-0c77ca68038a",
+              "leftValue": "={{ $json.contexto.mensagem_de_grupos }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "727bce96-f071-462a-a511-ed1f8527628c",
+              "leftValue": "={{ $json.contexto.event }}",
+              "rightValue": "ack",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            },
+            {
+              "id": "fe08b510-3e55-41f9-9683-5acba7d3d876",
+              "leftValue": "={{ $json.contexto.chat_id }}",
+              "rightValue": "@newsletter",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            },
+            {
+              "id": "2648ad70-a4c6-4ea8-99fc-5b861349ba40",
+              "leftValue": "={{ $json.contexto.chat_id }}",
+              "rightValue": "@g.us",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            },
+            {
+              "id": "dd986f7f-788e-4e05-b180-6c2cd416292e",
+              "leftValue": "={{ $json.contexto.chat_id }}",
+              "rightValue": "@broadcast",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            },
+            {
+              "id": "f2ee44c3-85d5-46dd-ade7-a15d679a1e88",
+              "leftValue": "={{ $json.contexto.media_url }}",
+              "rightValue": ".oga",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            },
+            {
+              "id": "994f480f-6658-4b41-9dfc-5dd66168d774",
+              "leftValue": "={{ $json.contexto.media_url }}",
+              "rightValue": ".ogg",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            },
+            {
+              "id": "8443ac1a-2245-4b44-acd2-c0e69f5dbb6b",
+              "leftValue": "={{ $json.contexto.media_url }}",
+              "rightValue": ".mp3",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            },
+            {
+              "id": "eef8bd85-a459-46a7-8035-31a17cd27f3c",
+              "leftValue": "={{ $json.contexto.from_me }}",
+              "rightValue": false,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "id": "5d1bccd3-006e-4079-9e6f-85d89c2e5619",
+      "name": "Validar Evento",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        704,
+        544
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "id": "8b86a252-3a12-4dc3-96c9-2592b299f0ce",
+                    "leftValue": "={{ $json.output.intencao }}",
+                    "rightValue": "encomenda_resposta",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "encomenda_resposta"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "id": "611ca3c2-f566-47c9-adb1-ab7d1a5d53c2",
+                    "leftValue": "={{ $json.output.intencao }}",
+                    "rightValue": "chamado_novo",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "chamado_novo"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "id": "6caf1f8b-c986-4f02-9784-11c812eb05bf",
+                    "leftValue": "={{ $json.output.intencao }}",
+                    "rightValue": "chamado_atualizacao",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "chamado_atualizacao"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "id": "2793e877-efee-49d8-b5db-342d026b13ce",
+                    "leftValue": "={{ $json.output.intencao }}",
+                    "rightValue": "atendimento_condominio",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "atendimento_condominio"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "f27ab88d-76a8-4b5f-8e1f-3c40bfc9ae9e",
+      "name": "Rotear",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [
+        2192,
+        992
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "waha-classificador",
+        "options": {}
+      },
+      "id": "6874d96d-1bee-4eec-9448-b1c4ef3b2c2a",
+      "name": "Classificar",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        544
+      ],
+      "webhookId": "ab9a1f11-fed1-417c-b973-e9e959332d25"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Unidade cadastrada: Bloco {{ $('Estruturar Payload').first().json.morador?.bloco || $('Filtra Morador').first().json.bloco || '' }} - Apto {{ $('Estruturar Payload').first().json.morador?.apartamento || $('Filtra Morador').first().json.apartamento || '' }}\nRelato anterior salvo: \"{{ $('Estruturar Payload').first().json.chamado?.relato_morador || '' }}\"\nNova mensagem do morador agora: \"{{ $('Normalizar Webhook').first().json.mensagem || $('Normalizar Webhook').first().json.texto || $('Normalizar Webhook').first().json.text || $('Normalizar Webhook').first().json.body || $('Normalizar Webhook').first().json.message || $('Normalizar Webhook').first().json.conteudo || '' }}\"\nDados brutos recebidos: {{ JSON.stringify($('Normalizar Webhook').first().json) }}\n\nConsolide o relato anterior com a nova mensagem e responda SOMENTE com o JSON.",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "Você é o assistente de portaria responsável pela triagem de chamados do condomínio. Sua tarefa é consolidar o relato do morador e decidir se o chamado já pode ser aberto ou se falta a descrição do problema.\n\nREGRAS DE DECISÃO:\n1. LEITURA OBRIGATÓRIA: Leia o texto do morador em \"Nova mensagem do morador agora\" e também dentro de \"Dados brutos recebidos\".\n2. DADOS DO MORADOR JÁ EXISTEM: O Bloco e o Apartamento já constam no cadastro acima. NUNCA inclua bloco, apartamento, endereço, autorização de entrada ou horário em \"dados_faltantes\".\n3. QUANDO SEGURAR A ABERTURA (dados_faltantes preenchido): APENAS se tanto o \"Relato anterior salvo\" quanto a \"Nova mensagem do morador\" não contiverem nenhuma descrição de problema (ex.: o morador disse apenas \"abrir chamado\" ou \"preciso abrir um chamado\"). Nesse caso:\n   - \"dados_faltantes\": [\"descrição do problema\"]\n   - \"pergunta\": \"Por favor, descreva qual é o problema para que a portaria possa abrir o chamado.\"\n4. QUANDO ABRIR O CHAMADO IMEDIATAMENTE (dados_faltantes = []): Assim que houver QUALQUER descrição de problema no relato anterior OU na nova mensagem (ex.: \"vazamento na torneira\", \"torneira pingando\", \"infiltração\"), considere a triagem CONCLUÍDA:\n   - \"dados_faltantes\": []\n   - \"pergunta\": \"\"\n   - \"resumo\": Resumo claro e impessoal em até 20 palavras combinando o problema e a unidade (ex.: \"Vazamento na torneira do apartamento\").\n\nCategorias permitidas: manutencao, limpeza, seguranca, barulho, outros.\nPrioridades permitidas: baixa, media, alta.\n\nResponda APENAS com o JSON exato abaixo, sem markdown:\n{\n  \"resumo\": \"ate 20 palavras, impessoal\",\n  \"categoria\": \"manutencao|limpeza|seguranca|barulho|outros\",\n  \"prioridade\": \"baixa|media|alta\",\n  \"dados_faltantes\": [],\n  \"pergunta\": \"\",\n  \"motivo\": \"1 frase objetiva\"\n}"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        3904,
+        1232
+      ],
+      "id": "0ac4b7be-c5a4-47ca-bf17-e9697273e717",
+      "name": "IA Triagem Chamado"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const rawInput = $json.output ?? $json.text ?? $json;\n\ntry {\n  let parsed;\n\n  if (typeof rawInput === 'object' && rawInput !== null) {\n    parsed = rawInput;\n  } else {\n    const cleanJson = String(rawInput)\n      .replace(/```json\\s*/gi, '')\n      .replace(/```\\s*/g, '')\n      .trim();\n    parsed = JSON.parse(cleanJson);\n  }\n\n  const dadosFaltantes = Array.isArray(parsed.dados_faltantes)\n    ? parsed.dados_faltantes.filter(Boolean)\n    : [];\n\n  const faltamDados = dadosFaltantes.length > 0;\n\n  const pergunta = faltamDados\n    ? (parsed.pergunta && parsed.pergunta.trim() !== ''\n        ? parsed.pergunta.trim()\n        : 'Por favor, descreva qual é o problema para que eu possa registrar o seu chamado.')\n    : '';\n\n  const webhook = $('Normalizar Webhook').first()?.json || {};\n  const payload = $('Estruturar Payload').first()?.json || {};\n\n  const chatId =\n    webhook.chat_id ||\n    webhook.chatId ||\n    webhook.remoteJid ||\n    webhook.telefone ||\n    webhook.whatsapp ||\n    payload.chat_id ||\n    payload.chatId ||\n    '';\n\n  const relatoAtual =\n    webhook.mensagem ||\n    webhook.texto ||\n    webhook.text ||\n    webhook.body ||\n    webhook.message ||\n    webhook.conteudo ||\n    payload.chamado?.relato_morador ||\n    '';\n\n  return {\n    json: {\n      chat_id: chatId,\n      relato: relatoAtual,\n      resumo: parsed.resumo || '',\n      categoria: parsed.categoria || 'outros',\n      prioridade: parsed.prioridade || 'media',\n      dados_faltantes: dadosFaltantes,\n      pergunta,\n      motivo: parsed.motivo || '',\n      faltam_dados: faltamDados,\n      parse_success: true,\n      raw_response: typeof rawInput === 'string' ? rawInput : JSON.stringify(rawInput)\n    }\n  };\n} catch (error) {\n  return {\n    json: {\n      parse_success: false,\n      validacao_ok: false,\n      faltam_dados: false,\n      erro_parse: error.message,\n      raw_response: typeof rawInput === 'string' ? rawInput : JSON.stringify(rawInput)\n    }\n  };\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4352,
+        1232
+      ],
+      "id": "1995dd24-eaa6-4699-9453-17ec6fa6bee9",
+      "name": "Interpretar Triagem"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "if-faltam",
+              "leftValue": "={{ $json.dados_faltantes.length > 0 }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        4576,
+        1232
+      ],
+      "id": "01688b86-825e-42e5-8ea5-df53d1ef35da",
+      "name": "Faltam Dados?"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH morador_info AS (\n    SELECT bloco, andar, apartamento\n    FROM public.moradores\n    WHERE right(regexp_replace(whatsapp, '\\D', '', 'g'), 10) = right(regexp_replace($1, '\\D', '', 'g'), 10)\n    LIMIT 1\n),\npendente AS (\n    SELECT c.protocolo\n    FROM public.chamados c\n    JOIN morador_info m\n      ON c.morador_bloco = m.bloco\n     AND c.morador_andar = m.andar\n     AND c.morador_apartamento = m.apartamento\n    WHERE c.status = 'aguardando_dados'\n    ORDER BY c.created_at DESC\n    LIMIT 1\n),\nalvo AS (\n    UPDATE public.chamados\n    SET\n        relato_morador = COALESCE(relato_morador, '') || chr(10) || $2,\n        resumo = COALESCE(NULLIF(trim($3), ''), resumo),\n        dados_faltantes = NULLIF(trim($4), '')\n    WHERE protocolo IN (SELECT protocolo FROM pendente)\n    RETURNING protocolo\n),\nnovo AS (\n    INSERT INTO public.chamados (\n        protocolo, morador_bloco, morador_andar, morador_apartamento,\n        relato_morador, resumo, dados_faltantes, status\n    )\n    SELECT\n        gen_random_uuid(), m.bloco, m.andar, m.apartamento,\n        $2, $3, $4, 'aguardando_dados'\n    FROM morador_info m\n    WHERE NOT EXISTS (SELECT 1 FROM pendente)\n    RETURNING protocolo\n)\nSELECT protocolo FROM alvo\nUNION ALL\nSELECT protocolo FROM novo;",
+        "options": {
+          "queryReplacement": "={{ [\n  $('Normalizar Webhook').first().json.chat_id || $('Normalizar Webhook').first().json.telefone || $('Normalizar Webhook').first().json.whatsapp || '',\n  $json.relato || '',\n  $json.resumo || '',\n  Array.isArray($json.dados_faltantes) ? $json.dados_faltantes.join(', ') : ($json.dados_faltantes || '')\n] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        4800,
+        1328
+      ],
+      "id": "a6cb151b-fae9-4884-b9c5-c4ffd1bf9e0c",
+      "name": "Registrar Aguardando Dados",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "RShdjD2hVLmjIyBj",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "Chatting",
+        "operation": "Send Text",
+        "session": "={{ $('Normalizar Webhook').item.json.session }}",
+        "chatId": "={{ $('Normalizar Webhook').item.json.chat_id }}",
+        "text": "={{ $('Interpretar Triagem').first().json.pergunta || $('Rotear').first().json.output.resposta_morador || $('Agente Triagem').first().json.output.resposta_morador || '' }}",
+        "requestOptions": {}
+      },
+      "type": "n8n-nodes-waha.WAHA",
+      "typeVersion": 202411,
+      "position": [
+        5024,
+        1328
+      ],
+      "id": "c3f95033-f2d4-446a-8499-9068e94c3dba",
+      "name": "Perguntar Dados Faltantes",
+      "credentials": {
+        "wahaApi": {
+          "id": "PQRcGzgOgnmLCusF",
+          "name": "WAHA account"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH resp_info AS (\n    SELECT nome, whatsapp, chat_id\n    FROM public.responsaveis\n    WHERE ativo IS TRUE\n    ORDER BY created_at ASC\n    LIMIT 1\n),\n\npendente AS (\n    SELECT c.protocolo\n    FROM public.chamados c\n    WHERE c.morador_bloco = $1\n      AND c.morador_andar = $2\n      AND c.morador_apartamento = $3\n      AND c.status = 'aguardando_dados'\n    ORDER BY c.created_at DESC\n    LIMIT 1\n),\n\natualizado AS (\n    UPDATE public.chamados c\n    SET\n        resumo = COALESCE(NULLIF(trim($4), ''), c.resumo),\n        status = 'ABERTO',\n        relato_morador = COALESCE(NULLIF(c.relato_morador, ''), '') || CASE WHEN c.relato_morador IS NOT NULL AND c.relato_morador <> '' THEN chr(10) ELSE '' END || COALESCE(NULLIF(trim($5), ''), $4),\n        dados_faltantes = NULL,\n        responsavel_whatsapp = COALESCE((SELECT whatsapp FROM resp_info), c.responsavel_whatsapp),\n        responsavel_chat_id = COALESCE((SELECT chat_id FROM resp_info), c.responsavel_chat_id)\n    WHERE c.protocolo IN (SELECT protocolo FROM pendente)\n    RETURNING\n        c.protocolo,\n        (SELECT nome FROM resp_info) AS responsavel,\n        c.responsavel_whatsapp\n),\n\nnovo AS (\n    INSERT INTO public.chamados (\n        protocolo,\n        morador_bloco,\n        morador_andar,\n        morador_apartamento,\n        resumo,\n        status,\n        relato_morador,\n        responsavel_whatsapp,\n        responsavel_chat_id\n    )\n    SELECT\n        gen_random_uuid(),\n        NULLIF(trim($1), ''),\n        NULLIF(trim($2), ''),\n        NULLIF(trim($3), ''),\n        $4,\n        'ABERTO',\n        COALESCE(NULLIF(trim($5), ''), $4),\n        r.whatsapp,\n        r.chat_id\n    FROM (SELECT 1) AS dummy\n    LEFT JOIN resp_info r ON TRUE\n    WHERE NOT EXISTS (SELECT 1 FROM pendente)\n    RETURNING\n        protocolo,\n        (SELECT nome FROM resp_info) AS responsavel,\n        responsavel_whatsapp\n)\n\nSELECT protocolo, responsavel, responsavel_whatsapp FROM atualizado\nUNION ALL\nSELECT protocolo, responsavel, responsavel_whatsapp FROM novo;",
+        "options": {
+          "queryReplacement": "={{ [\n  $('Estruturar Payload').first().json.morador?.bloco || $('Filtra Morador').first().json.bloco || '',\n  $('Estruturar Payload').first().json.morador?.andar || $('Filtra Morador').first().json.andar || '',\n  $('Estruturar Payload').first().json.morador?.apartamento || $('Filtra Morador').first().json.apartamento || '',\n  $json.resumo || '',\n  $json.relato || $json.resumo || ''\n] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        4800,
+        1136
+      ],
+      "id": "724a7226-9956-4568-80a2-bd7cedf3bc77",
+      "name": "Criar Chamado Confirmado",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "RShdjD2hVLmjIyBj",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "Chatting",
+        "operation": "Send Text",
+        "session": "={{ $('Normalizar Webhook').first().json.session }}",
+        "chatId": "={{ $('Normalizar Webhook').first().json.chat_id }}",
+        "text": "=Chamado registrado com sucesso!\n\n*Protocolo:* {{ $json.protocolo }}\n*Resumo:* {{ $('Interpretar Triagem').first().json.resumo }}\n*Unidade:* Bloco {{ $('Filtra Morador').first().json.bloco || $('Estruturar Payload').first().json.morador?.bloco || '' }} - Apto {{ $('Filtra Morador').first().json.apartamento || $('Estruturar Payload').first().json.morador?.apartamento || '' }}\n\nNossa equipe já foi notificada e você receberá atualizações por aqui.",
+        "requestOptions": {}
+      },
+      "type": "n8n-nodes-waha.WAHA",
+      "typeVersion": 202411,
+      "position": [
+        5024,
+        1136
+      ],
+      "id": "8c41a0a9-e109-4990-b59a-76dceb06622f",
+      "name": "Responder Protocolo",
+      "credentials": {
+        "wahaApi": {
+          "id": "PQRcGzgOgnmLCusF",
+          "name": "WAHA account"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT\n    c.id,\n    c.protocolo,\n    m.whatsapp AS morador_whatsapp,\n    m.nome AS morador_nome,\n    c.morador_bloco,\n    c.morador_andar,\n    c.morador_apartamento,\n    CONCAT('Bloco ', c.morador_bloco, ' - Apto ', c.morador_apartamento) AS unidade,\n    c.resumo,\n    c.status,\n    c.relato_morador AS relato,\n    c.relato_morador,\n    r.nome AS responsavel,\n    c.responsavel_whatsapp,\n    c.responsavel_chat_id,\n    c.dados_faltantes,\n    c.mensagem_resposta,\n    c.data_abertura AS criado_em,\n    c.created_at,\n    c.updated_at\nFROM public.chamados c\nLEFT JOIN public.moradores m\n  ON c.morador_bloco = m.bloco\n AND c.morador_andar = m.andar\n AND c.morador_apartamento = m.apartamento\nLEFT JOIN public.responsaveis r\n  ON c.responsavel_whatsapp = r.whatsapp\nWHERE\n    (\n        NULLIF(trim($2), '') IS NOT NULL\n        AND upper(trim(c.protocolo::text)) = upper(trim($2))\n        AND (\n            (c.morador_bloco = $3 AND c.morador_andar = $4 AND c.morador_apartamento = $5)\n            OR right(regexp_replace(COALESCE(m.whatsapp, ''), '\\D', '', 'g'), 10) = right(regexp_replace($1, '\\D', '', 'g'), 10)\n        )\n    )\n    OR\n    (\n        NULLIF(trim($2), '') IS NULL\n        AND (\n            (c.morador_bloco = $3 AND c.morador_andar = $4 AND c.morador_apartamento = $5)\n            OR right(regexp_replace(COALESCE(m.whatsapp, ''), '\\D', '', 'g'), 10) = right(regexp_replace($1, '\\D', '', 'g'), 10)\n        )\n    )\nORDER BY\n    CASE\n        WHEN upper(c.status) IN ('ABERTO', 'EM_ANDAMENTO', 'AGUARDANDO_DADOS', 'REABERTO') THEN 0\n        ELSE 1\n    END ASC,\n    c.created_at DESC\nLIMIT 1;",
+        "options": {
+          "queryReplacement": "={{ [\n  $('Parse_Consultar_Chamados').first().json.morador_whatsapp || $('Normalizar Webhook').first().json.morador_whatsapp || $json.chatId || '',\n  $('Parse_Consultar_Chamados').first().json.protocolo || $json.protocolo || '',\n  $('Parse_Consultar_Chamados').first().json.bloco || '',\n  $('Parse_Consultar_Chamados').first().json.andar || '',\n  $('Parse_Consultar_Chamados').first().json.apartamento || ''\n] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        3472,
+        1664
+      ],
+      "id": "bb54035f-f4f1-43a8-9726-205d37c8042c",
+      "name": "Buscar Chamado Ativo",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "RShdjD2hVLmjIyBj",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const cmd = $('Parse_Consultar_Chamados').item.json || {};\nconst norm = $('Normalizar Webhook').item.json || {};\nconst chamado = $input.item.json || {};\n\nconst session = cmd.session || norm.session || 'default';\nconst chatId = cmd.chatId || norm.chat_id || norm.chatId || '';\nconst textoRaw = String(cmd.texto || cmd.message || norm.texto || norm.mensagem || '').trim();\nconst textoNorm = textoRaw\n  .toLowerCase()\n  .normalize('NFD')\n  .replace(/[\\u0300-\\u036f]/g, '');\n\nconst temChamado = Boolean(chamado && chamado.protocolo);\n\n// Identifica a intenção/comando do morador ou responsável\nlet comando = 'fallback';\n\nif (!temChamado) {\n  comando = 'sem_chamado';\n} else if (/\\b(status|andamento|acompanhar|situacao|consultar|consulta|meu chamado|meus chamados|protocolo)\\b/.test(textoNorm)) {\n  comando = 'status';\n} else if (/\\b(confirmar|confirmo|ok|ciente|recebido|aceito|de acordo)\\b/.test(textoNorm)) {\n  comando = 'confirmo';\n} else if (/\\b(resolvido|resolver|concluido|concluir|finalizado|finalizar|arrumado|pronto|solucionado)\\b/.test(textoNorm)) {\n  comando = 'resolvido';\n} else if (/\\b(reabrir|reabertura|voltou|continua|ainda nao|nao resolveu|pendente novamente)\\b/.test(textoNorm)) {\n  comando = 'reabrir';\n} else if (/\\b(cancelar|cancelamento|desistir|desisto|excluir|apagar|nao precisa mais)\\b/.test(textoNorm)) {\n  comando = 'cancelar';\n}\n\nreturn {\n  json: {\n    session,\n    chatId,\n    chat_id: chatId,\n    comando,\n    tem_chamado: temChamado,\n    texto: textoRaw,\n    protocolo: chamado.protocolo || cmd.protocolo || '',\n    status_atual: chamado.status || '',\n    resumo: chamado.resumo || '',\n    relato: chamado.relato_morador || chamado.relato || '',\n    unidade: chamado.unidade || '',\n    morador_bloco: chamado.morador_bloco || cmd.bloco || '',\n    morador_andar: chamado.morador_andar || cmd.andar || '',\n    morador_apartamento: chamado.morador_apartamento || cmd.apartamento || '',\n    morador_nome: chamado.morador_nome || '',\n    morador_whatsapp: chamado.morador_whatsapp || cmd.morador_whatsapp || '',\n    responsavel: chamado.responsavel || 'Equipe da Portaria',\n    responsavel_whatsapp: chamado.responsavel_whatsapp || '',\n    responsavel_chat_id: chamado.responsavel_chat_id || '',\n    data_abertura: chamado.data_abertura || chamado.criado_em || ''\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3792,
+        1664
+      ],
+      "id": "a86112a3-98b8-4c4b-8a89-f0e248e3324f",
+      "name": "Preparar Comando"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "rule-sem-chamado",
+                    "leftValue": "={{ $json.comando }}",
+                    "rightValue": "sem_chamado",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Sem Chamado"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "rule-status",
+                    "leftValue": "={{ $json.comando }}",
+                    "rightValue": "status",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Status"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "rule-confirmo",
+                    "leftValue": "={{ $json.comando }}",
+                    "rightValue": "confirmo",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Confirmo"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "rule-resolvido",
+                    "leftValue": "={{ $json.comando }}",
+                    "rightValue": "resolvido",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Resolvido"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "rule-reabrir",
+                    "leftValue": "={{ $json.comando }}",
+                    "rightValue": "reabrir",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Reabrir"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "rule-cancelar",
+                    "leftValue": "={{ $json.comando }}",
+                    "rightValue": "cancelar",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Cancelar"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        4320,
+        2016
+      ],
+      "id": "b274edc1-2ec7-4de3-8f3c-b4ee603892a3",
+      "name": "Qual Comando?"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT\n  c.protocolo,\n  lower(COALESCE(c.status, 'abertura')) AS tipo,\n  COALESCE(\n    NULLIF(trim(c.mensagem_resposta), ''),\n    CASE upper(c.status)\n      WHEN 'ABERTO' THEN 'Chamado aberto e aguardando atendimento da portaria.'\n      WHEN 'EM_ANDAMENTO' THEN 'Chamado em andamento com a equipe responsável.'\n      WHEN 'AGUARDANDO_DADOS' THEN 'Aguardando informações adicionais do morador.'\n      WHEN 'RESOLVIDO' THEN 'Chamado concluído e resolvido.'\n      WHEN 'CANCELADO' THEN 'Chamado cancelado.'\n      WHEN 'REABERTO' THEN 'Chamado reaberto e aguardando atendimento.'\n      ELSE 'Chamado registrado no sistema.'\n    END\n  ) AS descricao,\n  COALESCE(c.updated_at, c.data_abertura, c.created_at) AS criado_em\nFROM public.chamados c\nWHERE c.protocolo = $1::uuid\nLIMIT 1;",
+        "options": {
+          "queryReplacement": "={{[\n  $json.protocolo || $('Preparar Comando').item.json.protocolo\n]}}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        4576,
+        1792
+      ],
+      "id": "0a06272e-0ed3-45b1-9fdb-29a5e2afed57",
+      "name": "Buscar Ultimo Evento",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "RShdjD2hVLmjIyBj",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "Chatting",
+        "operation": "Send Text",
+        "session": "={{ $('Preparar Comando').first().json.session || 'default' }}",
+        "chatId": "={{ $('Preparar Comando').first().json.chatId }}",
+        "text": "={{ `📋 *Status do seu chamado*\\n\\n• *Protocolo:* ${$('Preparar Comando').first().json.protocolo}\\n• *Unidade:* ${$('Preparar Comando').first().json.unidade}\\n• *Resumo:* ${$('Preparar Comando').first().json.resumo}\\n• *Status atual:* *${String($('Preparar Comando').first().json.status_atual).toUpperCase()}*\\n• *Responsável:* ${$('Preparar Comando').first().json.responsavel}\\n\\nComandos disponíveis: *RESOLVIDO*, *REABRIR* ou *CANCELAR*.` }}",
+        "requestOptions": {}
+      },
+      "type": "n8n-nodes-waha.WAHA",
+      "typeVersion": 202411,
+      "position": [
+        4800,
+        1792
+      ],
+      "id": "48be433f-096e-4980-84af-09412a6be818",
+      "name": "Responder Status",
+      "credentials": {
+        "wahaApi": {
+          "id": "PQRcGzgOgnmLCusF",
+          "name": "WAHA account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH atualizado AS (\n    UPDATE public.chamados\n    SET\n        status = 'em_andamento',\n        confirmado = true,\n        atualizado_em = now()\n    WHERE upper(trim(protocolo)) = upper(trim($1))\n      AND right(regexp_replace(morador_whatsapp, '\\D', '', 'g'), 10) = right(regexp_replace($2, '\\D', '', 'g'), 10)\n    RETURNING\n        protocolo,\n        unidade,\n        resumo,\n        status,\n        responsavel,\n        responsavel_whatsapp\n),\nmetrica AS (\n    INSERT INTO public.eventos_metricas (fluxo, protocolo, metrica, valor_texto)\n    SELECT 'chamado', protocolo, 'status_alterado', 'em_andamento'\n    FROM atualizado\n    RETURNING protocolo\n)\nSELECT\n    protocolo,\n    unidade,\n    resumo,\n    status,\n    responsavel,\n    responsavel_whatsapp\nFROM atualizado;",
+        "options": {
+          "queryReplacement": "={{ [$('Preparar Comando').first().json.protocolo || '', $('Preparar Comando').first().json.morador_whatsapp || ''] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        4576,
+        1936
+      ],
+      "id": "4938fe8f-14cd-49a2-9a93-a5abacf368a8",
+      "name": "Confirmar Chamado",
+      "credentials": {
+        "postgres": {
+          "id": "RShdjD2hVLmjIyBj",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "Chatting",
+        "operation": "Send Text",
+        "session": "={{ $('Preparar Comando').first().json.session || 'default' }}",
+        "chatId": "={{ $('Preparar Comando').first().json.chatId }}",
+        "text": "={{ `Confirmação registrada! 👍 O chamado *${$('Confirmar Chamado').first().json.protocolo}* (${$('Confirmar Chamado').first().json.resumo}) está em andamento com *${$('Confirmar Chamado').first().json.responsavel || 'Administração'}*.` }}",
+        "requestOptions": {}
+      },
+      "type": "n8n-nodes-waha.WAHA",
+      "typeVersion": 202411,
+      "position": [
+        4800,
+        1936
+      ],
+      "id": "0cc46a1f-c980-421a-88e9-a3a275ad4496",
+      "name": "Avisar Responsavel Confirmacao",
+      "credentials": {
+        "wahaApi": {
+          "id": "PQRcGzgOgnmLCusF",
+          "name": "WAHA account"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH atualizado AS (\n    UPDATE public.chamados c\n    SET\n        status = 'RESOLVIDO',\n        data_fechamento = NOW(),\n        updated_at = NOW(),\n        mensagem_resposta = 'Chamado marcado como resolvido.'\n    FROM public.moradores m\n    WHERE c.morador_bloco = m.bloco\n      AND c.morador_andar = m.andar\n      AND c.morador_apartamento = m.apartamento\n      AND c.protocolo = $1::uuid\n      AND (\n          right(regexp_replace(COALESCE(m.whatsapp, ''), '\\D', '', 'g'), 10) = right(regexp_replace($2, '\\D', '', 'g'), 10)\n          OR (c.morador_bloco = $3 AND c.morador_andar = $4 AND c.morador_apartamento = $5)\n      )\n    RETURNING\n        c.protocolo,\n        CONCAT('Bloco ', c.morador_bloco, ' - Apto ', c.morador_apartamento) AS unidade,\n        c.resumo,\n        c.status,\n        COALESCE(\n            (SELECT r.nome FROM public.responsaveis r WHERE r.whatsapp = c.responsavel_whatsapp LIMIT 1),\n            'Equipe da Portaria'\n        ) AS responsavel,\n        c.responsavel_whatsapp\n),\nmetrica AS (\n    INSERT INTO public.eventos_metricas (fluxo, protocolo, metrica, valor_texto)\n    SELECT 'chamado', protocolo, 'status_alterado', 'RESOLVIDO'\n    FROM atualizado\n    RETURNING protocolo\n)\nSELECT\n    protocolo,\n    unidade,\n    resumo,\n    status,\n    responsavel,\n    responsavel_whatsapp\nFROM atualizado;",
+        "options": {
+          "queryReplacement": "={{ [\n  $('Preparar Comando').item.json.protocolo || '',\n  $('Preparar Comando').item.json.morador_whatsapp || '',\n  $('Preparar Comando').item.json.morador_bloco || '',\n  $('Preparar Comando').item.json.morador_andar || '',\n  $('Preparar Comando').item.json.morador_apartamento || ''\n] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        4576,
+        2080
+      ],
+      "id": "6479731e-995f-40cb-8708-f3ecca316010",
+      "name": "Resolver Chamado",
+      "credentials": {
+        "postgres": {
+          "id": "RShdjD2hVLmjIyBj",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "Chatting",
+        "operation": "Send Text",
+        "session": "={{ $('Preparar Comando').first().json.session || 'default' }}",
+        "chatId": "={{ $('Preparar Comando').first().json.chatId }}",
+        "text": "={{ `Chamado *${$('Resolver Chamado').first().json.protocolo}* marcado como *RESOLVIDO*! ✅ Obrigado pelo retorno.\\n\\nCaso o problema volte a ocorrer, basta enviar *REABRIR*.` }}",
+        "requestOptions": {}
+      },
+      "type": "n8n-nodes-waha.WAHA",
+      "typeVersion": 202411,
+      "position": [
+        4800,
+        2080
+      ],
+      "id": "0262fc0e-dbea-4200-af5f-0502643219e0",
+      "name": "Avisar Morador Resolvido",
+      "credentials": {
+        "wahaApi": {
+          "id": "PQRcGzgOgnmLCusF",
+          "name": "WAHA account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH atualizado AS (\n    UPDATE public.chamados c\n    SET\n        status = 'REABERTO',\n        data_fechamento = NULL,\n        updated_at = NOW(),\n        mensagem_resposta = 'Chamado reaberto pelo morador e aguardando novo atendimento.'\n    FROM public.moradores m\n    WHERE c.morador_bloco = m.bloco\n      AND c.morador_andar = m.andar\n      AND c.morador_apartamento = m.apartamento\n      AND c.protocolo = $1::uuid\n      AND (\n          right(regexp_replace(COALESCE(m.whatsapp, ''), '\\D', '', 'g'), 10) = right(regexp_replace($2, '\\D', '', 'g'), 10)\n          OR (c.morador_bloco = $3 AND c.morador_andar = $4 AND c.morador_apartamento = $5)\n      )\n    RETURNING\n        c.protocolo,\n        CONCAT('Bloco ', c.morador_bloco, ' - Apto ', c.morador_apartamento) AS unidade,\n        c.resumo,\n        c.status,\n        COALESCE(\n            (SELECT r.nome FROM public.responsaveis r WHERE r.whatsapp = c.responsavel_whatsapp LIMIT 1),\n            'Equipe da Portaria'\n        ) AS responsavel,\n        c.responsavel_whatsapp\n),\nmetrica AS (\n    INSERT INTO public.eventos_metricas (fluxo, protocolo, metrica, valor_texto)\n    SELECT 'chamado', protocolo, 'status_alterado', 'REABERTO'\n    FROM atualizado\n    RETURNING protocolo\n)\nSELECT\n    protocolo,\n    unidade,\n    resumo,\n    status,\n    responsavel,\n    responsavel_whatsapp\nFROM atualizado;",
+        "options": {
+          "queryReplacement": "={{ [\n  $('Preparar Comando').item.json.protocolo || '',\n  $('Preparar Comando').item.json.morador_whatsapp || '',\n  $('Preparar Comando').item.json.morador_bloco || '',\n  $('Preparar Comando').item.json.morador_andar || '',\n  $('Preparar Comando').item.json.morador_apartamento || ''\n] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        4576,
+        2208
+      ],
+      "id": "c072ce24-a786-42c8-a85c-3ecb1a19022f",
+      "name": "Reabrir Chamado",
+      "credentials": {
+        "postgres": {
+          "id": "RShdjD2hVLmjIyBj",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "Chatting",
+        "operation": "Send Text",
+        "session": "={{ $('Preparar Comando').first().json.session || 'default' }}",
+        "chatId": "={{ (() => { const raw = String($('Reabrir Chamado').first().json.responsavel_whatsapp || $('Preparar Comando').first().json.responsavel_whatsapp || '').trim(); if (!raw) return $('Preparar Comando').first().json.chatId; return raw.includes('@') ? raw : `${raw.replace(/\\D/g, '')}@s.whatsapp.net`; })() }}",
+        "text": "={{ `Chamado *${$('Reabrir Chamado').first().json.protocolo}* foi *REABERTO*! 🔄 Nossa equipe (${$('Reabrir Chamado').first().json.responsavel || 'Administração'}) já foi notificada para verificar novamente.` }}",
+        "requestOptions": {}
+      },
+      "type": "n8n-nodes-waha.WAHA",
+      "typeVersion": 202411,
+      "position": [
+        4800,
+        2224
+      ],
+      "id": "78473e8f-605a-4e21-bcba-b129dca9ee33",
+      "name": "Avisar Responsavel Reabertura",
+      "credentials": {
+        "wahaApi": {
+          "id": "PQRcGzgOgnmLCusF",
+          "name": "WAHA account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH atualizado AS (\n    UPDATE public.chamados c\n    SET\n        status = 'CANCELADO',\n        data_fechamento = NOW(),\n        updated_at = NOW(),\n        mensagem_resposta = 'Chamado cancelado a pedido do morador.'\n    FROM public.moradores m\n    WHERE c.morador_bloco = m.bloco\n      AND c.morador_andar = m.andar\n      AND c.morador_apartamento = m.apartamento\n      AND c.protocolo = $1::uuid\n      AND (\n          right(regexp_replace(COALESCE(m.whatsapp, ''), '\\D', '', 'g'), 10) = right(regexp_replace($2, '\\D', '', 'g'), 10)\n          OR (c.morador_bloco = $3 AND c.morador_andar = $4 AND c.morador_apartamento = $5)\n      )\n    RETURNING\n        c.protocolo,\n        CONCAT('Bloco ', c.morador_bloco, ' - Apto ', c.morador_apartamento) AS unidade,\n        c.resumo,\n        c.status,\n        COALESCE(\n            (SELECT r.nome FROM public.responsaveis r WHERE r.whatsapp = c.responsavel_whatsapp LIMIT 1),\n            'Equipe da Portaria'\n        ) AS responsavel,\n        c.responsavel_whatsapp\n),\nmetrica AS (\n    INSERT INTO public.eventos_metricas (fluxo, protocolo, metrica, valor_texto)\n    SELECT 'chamado', protocolo, 'status_alterado', 'CANCELADO'\n    FROM atualizado\n    RETURNING protocolo\n)\nSELECT\n    protocolo,\n    unidade,\n    resumo,\n    status,\n    responsavel,\n    responsavel_whatsapp\nFROM atualizado;",
+        "options": {
+          "queryReplacement": "={{ [\n  $('Preparar Comando').item.json.protocolo || '',\n  $('Preparar Comando').item.json.morador_whatsapp || '',\n  $('Preparar Comando').item.json.morador_bloco || '',\n  $('Preparar Comando').item.json.morador_andar || '',\n  $('Preparar Comando').item.json.morador_apartamento || ''\n] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        4576,
+        2352
+      ],
+      "id": "356dffcb-7707-4095-8acb-bacaa2aa699a",
+      "name": "Cancelar Chamado",
+      "credentials": {
+        "postgres": {
+          "id": "RShdjD2hVLmjIyBj",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "Chatting",
+        "operation": "Send Text",
+        "session": "={{ $('Preparar Comando').first().json.session || 'default' }}",
+        "chatId": "={{ $('Preparar Comando').first().json.chatId }}",
+        "text": "={{ `Chamado *${$('Cancelar Chamado').first().json.protocolo}* foi *CANCELADO* conforme solicitado. 🗑️\\n\\nSe precisar de algo mais, é só mandar uma mensagem por aqui!` }}",
+        "requestOptions": {}
+      },
+      "type": "n8n-nodes-waha.WAHA",
+      "typeVersion": 202411,
+      "position": [
+        4800,
+        2400
+      ],
+      "id": "4bbb3c44-8b76-49f7-8cf5-2a239c21587c",
+      "name": "Avisar Morador Cancelado",
+      "credentials": {
+        "wahaApi": {
+          "id": "PQRcGzgOgnmLCusF",
+          "name": "WAHA account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "Chatting",
+        "operation": "Send Text",
+        "session": "={{ $('Preparar Comando').first().json.session || 'default' }}",
+        "chatId": "={{ $('Preparar Comando').first().json.chatId }}",
+        "text": "{{ `Não encontrei nenhum chamado vinculado ao seu número no momento. 🔎\\n\\nSe quiser abrir uma nova solicitação, basta descrever o problema e informar sua *unidade/apartamento*.` }}",
+        "requestOptions": {}
+      },
+      "type": "n8n-nodes-waha.WAHA",
+      "typeVersion": 202411,
+      "position": [
+        4576,
+        1616
+      ],
+      "id": "0c6e4741-22ca-45f1-b14a-39c281e4a134",
+      "name": "Chamado Nao Encontrado",
+      "credentials": {
+        "wahaApi": {
+          "id": "PQRcGzgOgnmLCusF",
+          "name": "WAHA account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "Chatting",
+        "operation": "Send Text",
+        "session": "={{ $('Preparar Comando').item.json.session }}",
+        "chatId": "={{ $('Preparar Comando').item.json.chatId }}",
+        "text": "=Não entendi o comando. Use CONFIRMO, STATUS, RESOLVIDO ou REABRIR. Para abrir um novo chamado, envie o relato do problema.",
+        "requestOptions": {}
+      },
+      "type": "n8n-nodes-waha.WAHA",
+      "typeVersion": 202411,
+      "position": [
+        4592,
+        2560
+      ],
+      "id": "67c8011b-2a73-4638-ac14-6f2277a1b7cb",
+      "name": "Comando Nao Reconhecido",
+      "credentials": {
+        "wahaApi": {
+          "id": "PQRcGzgOgnmLCusF",
+          "name": "WAHA account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO public.eventos_metricas (\n  fluxo,\n  protocolo,\n  metrica,\n  valor_texto\n)\nVALUES (\n  'chamado',\n  $1,\n  'falha_envio',\n  $2\n);",
+        "options": {
+          "queryReplacement": "={{[\n  $json.protocolo\n    || ($('Criar Chamado Confirmado').isExecuted ? $('Criar Chamado Confirmado').first()?.json?.protocolo : null)\n    || ($('Registrar Aguardando Dados').isExecuted ? $('Registrar Aguardando Dados').first()?.json?.protocolo : null)\n    || ($('Preparar Comando').isExecuted ? $('Preparar Comando').first()?.json?.protocolo : null)\n    || null,\n  ($json.error && $json.error.message)\n    ? String($json.error.message).slice(0, 180)\n    : 'erro_envio'\n]}}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        5536,
+        1664
+      ],
+      "id": "e207d7db-7115-45f9-a61e-9cfcd28c215f",
+      "name": "Metrica Falha Envio Chamado",
+      "credentials": {
+        "postgres": {
+          "id": "RShdjD2hVLmjIyBj",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Normalizar Webhook').item.json.chat_id }}",
+        "sessionTTL": 3600,
+        "contextWindowLength": 6
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryRedisChat",
+      "typeVersion": 1.6,
+      "position": [
+        3968,
+        1392
+      ],
+      "id": "de5cc64b-1676-4b04-a71b-84b7639f2532",
+      "name": "Memoria Chamado",
+      "credentials": {
+        "redis": {
+          "id": "d4KKBy4xJOSzjGUd",
+          "name": "Redis account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "9487a668-d405-418a-a0b1-cdf999d1ee94",
+              "name": "session",
+              "value": "={{ $('Classificar').item.json.body.session }}",
+              "type": "string"
+            },
+            {
+              "id": "b32f3f08-9b8e-425a-a849-5b51c769d331",
+              "name": "chatId",
+              "value": "={{ $('Classificar').item.json.body.payload.from }}",
+              "type": "string"
+            },
+            {
+              "id": "706aa0ac-080a-4c92-a27e-3fd54d74f5cd",
+              "name": "message",
+              "value": "={{ $('Classificar').item.json.body.payload.body }}",
+              "type": "string"
+            },
+            {
+              "id": "c275cbc5-9042-40d0-a8ee-b13c8b8e9864",
+              "name": "pushName",
+              "value": "={{ $('Classificar').item.json.body.payload._data.Info.PushName }}",
+              "type": "string"
+            },
+            {
+              "id": "31325484-2719-4797-9d64-cdcb5e19a261",
+              "name": "morador_whatsapp",
+              "value": "={{ $('Classificar').item.json.body.payload._data.Info.SenderAlt }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        2592,
+        816
+      ],
+      "id": "9d19bc36-8b7e-43ca-8413-ebe4e9750c8b",
+      "name": "EF_Encomenda_Resposta"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "c6863489-4ab0-4cca-9381-28be3b437530",
+              "name": "session",
+              "value": "={{ $('Classificar').item.json.body.session }}",
+              "type": "string"
+            },
+            {
+              "id": "cf6f195d-1bbe-43f7-86bc-0ea03bddcf76",
+              "name": "chatId",
+              "value": "={{ $('Classificar').item.json.body.payload.from }}",
+              "type": "string"
+            },
+            {
+              "id": "235cddbe-83f4-4cce-b22b-6464e05cab70",
+              "name": "message",
+              "value": "={{ $('Classificar').item.json.body.payload.body }}",
+              "type": "string"
+            },
+            {
+              "id": "5706843b-6588-4b97-b670-668c93e21378",
+              "name": "pushName",
+              "value": "={{ $('Classificar').item.json.body.payload._data.Info.PushName }}",
+              "type": "string"
+            },
+            {
+              "id": "e18efa3f-cfa8-412b-8f42-eddace35617e",
+              "name": "morador_whatsapp",
+              "value": "={{ $('Classificar').item.json.body.payload._data.Info.SenderAlt }}",
+              "type": "string"
+            },
+            {
+              "id": "79a0ceda-2e7d-47ca-b961-28db83dd7671",
+              "name": "payload_id",
+              "value": "={{ $('Classificar').item.json.body.payload.id }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        2960,
+        1472
+      ],
+      "id": "409d472a-2d5c-4187-a7f9-f7479290d894",
+      "name": "EF_Consultar_Chamados"
+    },
+    {
+      "parameters": {
+        "jsCode": "return (function parseResposta($) {\n  const norm = $('Normalizar Webhook').item.json || {};\n  const morador = $('Filtra Morador').item.json || {};\n  const telefone = value => {\n    const raw = String(value || '');\n    if (raw.includes('@') && !/@(?:c\\.us|s\\.whatsapp\\.net)$/.test(raw)) return '';\n    const digits = raw.split('@')[0].replace(/\\D/g, '');\n    if (/^\\d{10,11}$/.test(digits)) return '55' + digits;\n    return /^55\\d{10,11}$/.test(digits) ? digits : '';\n  };\n  const sender = /@(?:c\\.us|s\\.whatsapp\\.net)$/.test(String(norm.chat_id || ''))\n    ? telefone(norm.chat_id) : telefone(norm.chamado_responsavel_whatsapp);\n  if (!sender || morador.ativo !== true || telefone(morador.whatsapp) !== sender) {\n    throw new Error('Remetente não vinculado a um morador ativo.');\n  }\n  const texto = String(norm.mensagem || norm.texto || norm.text || norm.chamado_relato || '').trim();\n  const normalized = texto.toLowerCase().normalize('NFD').replace(/[\\u0300-\\u036f]/g, '');\n  const command = normalized.match(/^(recebi|retirei|peguei|ja peguei|ok|li|ciente|consultar|encomenda)(?:\\s+(?:(?:codigo|protocolo)\\s*[:#-]?\\s*)?([0-9]{4,10}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}))?[.!]?$/);\n  const retirada = command && ['recebi','retirei','peguei','ja peguei'].includes(command[1]);\n  return { json: {\n    session: norm.session || 'default', chat_id: norm.chat_id || '', texto,\n    acao: retirada ? 'confirmar_retirada' : 'confirmar_leitura',\n    seletor: command?.[2] || '', comando_valido: Boolean(command),\n    morador_whatsapp: sender, morador_nome: morador.nome || '',\n    morador_bloco: morador.bloco || '', morador_andar: morador.andar || '',\n    morador_apartamento: morador.apartamento || '',\n  } };\n})($);"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2944,
+        816
+      ],
+      "id": "0226668c-d81a-4809-b73c-c2ff1e0d4ce7",
+      "name": "Parse_Encomenda_Resposta",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Leitura segura dos nós anteriores (funciona tanto via webhook quanto via execução manual EF_Consultar_Chamados)\nconst manual = $('EF_Consultar_Chamados').isExecuted ? ($('EF_Consultar_Chamados').first().json || {}) : {};\nconst norm = $('Normalizar Webhook').isExecuted ? ($('Normalizar Webhook').first().json || {}) : {};\nconst payload = $('Estruturar Payload').isExecuted ? ($('Estruturar Payload').first().json || {}) : {};\nconst moradorDb = $('Filtra Morador').isExecuted ? ($('Filtra Morador').first().json || {}) : {};\nconst geminiOut = $('Extrair Dados IA').isExecuted ? ($('Extrair Dados IA').first().json?.output || {}) : {};\nconst rawBody = $json.body || {};\n\n// 1. Identificação do usuário e sessão\nconst session = manual.session || norm.session || 'default';\n\nconst chatId =\n  manual.chatId ||\n  norm.chat_id ||\n  norm.chatId ||\n  geminiOut.identificador_usuario ||\n  rawBody.TargetChat ||\n  rawBody.TargetSender ||\n  '';\n\nconst moradorWhatsapp =\n  manual.morador_whatsapp ||\n  norm.morador_whatsapp ||\n  norm.whatsapp ||\n  norm.telefone ||\n  geminiOut.identificador_usuario ||\n  rawBody.TargetSender ||\n  chatId ||\n  '';\n\n// Dados cadastrais do morador (para garantir consulta mesmo quando chatId vier como @lid)\nconst bloco = payload.morador?.bloco || moradorDb.bloco || '';\nconst andar = payload.morador?.andar || moradorDb.andar || '';\nconst apartamento = payload.morador?.apartamento || moradorDb.apartamento || '';\n\n// 2. Texto da mensagem recebida\nconst texto = String(\n  manual.message ||\n  manual.texto ||\n  norm.texto ||\n  norm.mensagem ||\n  norm.body ||\n  rawBody.Message?.conversation ||\n  rawBody.RawMessage?.conversation ||\n  ''\n).trim();\n\n// 3. Extrai protocolo UUID se o morador tiver informado na mensagem\nconst uuidMatch = texto.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i);\nconst protocolo = uuidMatch\n  ? uuidMatch[0]\n  : (manual.protocolo || payload.chamado?.protocolo || '');\n\nreturn [\n  {\n    json: {\n      session,\n      chatId,\n      chat_id: chatId,\n      morador_whatsapp: moradorWhatsapp,\n      bloco,\n      andar,\n      apartamento,\n      texto,\n      message: texto,\n      protocolo\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3184,
+        1664
+      ],
+      "id": "58964967-33af-47d0-8184-9266b19ca325",
+      "name": "Parse_Consultar_Chamados"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.contexto.media_url }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        },
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth"
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        1392,
+        544
+      ],
+      "id": "bf71691c-ae5a-4d38-bea8-8c1772360af6",
+      "name": "Baixar Imagem1",
+      "retryOnFail": true,
+      "waitBetweenTries": 2000,
+      "onError": "continueErrorOutput",
+      "credentials": {
+        "httpHeaderAuth": {
+          "name": "WAHA Midia - configurar X-Api-Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "CREATE EXTENSION IF NOT EXISTS \"pgcrypto\";\n\n-- 1. Tabela de Moradores (Chave Primária Composta: bloco + andar + apartamento)\nCREATE TABLE IF NOT EXISTS moradores (\n  bloco VARCHAR(20) NOT NULL,\n  andar VARCHAR(20) NOT NULL,\n  apartamento VARCHAR(20) NOT NULL,\n  nome VARCHAR(150) NOT NULL,\n  whatsapp VARCHAR(20) UNIQUE NOT NULL,\n  endereco VARCHAR(255),\n  complemento VARCHAR(100),\n  ativo BOOLEAN NOT NULL DEFAULT TRUE,\n  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n\n  CONSTRAINT pk_moradores PRIMARY KEY (bloco, andar, apartamento)\n);\n\nCREATE INDEX IF NOT EXISTS idx_moradores_unidade ON moradores (apartamento, bloco);\nCREATE INDEX IF NOT EXISTS idx_moradores_nome ON moradores (LOWER(nome));\n\n-- 2. Tabela de Responsáveis / Funcionários da Portaria\nCREATE TABLE IF NOT EXISTS responsaveis (\n  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),\n  nome VARCHAR(150) NOT NULL,\n  whatsapp VARCHAR(20) UNIQUE NOT NULL,\n  chat_id VARCHAR(50),\n  cargo VARCHAR(50) DEFAULT 'PORTEIRO',\n  ativo BOOLEAN NOT NULL DEFAULT TRUE,\n  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()\n);\n\n-- 3. Tabela de Encomendas (Vinculada pela Chave Composta do Morador)\nCREATE TABLE IF NOT EXISTS encomendas (\n  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),\n  morador_bloco VARCHAR(20),\n  morador_andar VARCHAR(20),\n  morador_apartamento VARCHAR(20),\n  protocolo UUID UNIQUE NOT NULL,\n  codigo_retirada VARCHAR(10) NOT NULL,\n  status VARCHAR(30) NOT NULL DEFAULT 'AGUARDANDO_RETIRADA',\n  destinatario_nome VARCHAR(150),\n  destinatario_apartamento VARCHAR(20),\n  destinatario_bloco VARCHAR(20),\n  destinatario_andar VARCHAR(20),\n  destinatario_endereco VARCHAR(255),\n  dados_remetente VARCHAR(255),\n  media_url TEXT,\n  imagem_legivel BOOLEAN NOT NULL DEFAULT FALSE,\n  data_recebimento TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n  data_retirada TIMESTAMPTZ,\n  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n\n  CONSTRAINT fk_encomendas_morador\n    FOREIGN KEY (morador_bloco, morador_andar, morador_apartamento)\n    REFERENCES moradores (bloco, andar, apartamento)\n    ON UPDATE CASCADE\n    ON DELETE SET NULL\n);\n\nCREATE INDEX IF NOT EXISTS idx_encomendas_morador_status ON encomendas (morador_bloco, morador_andar, morador_apartamento, status);\nCREATE INDEX IF NOT EXISTS idx_encomendas_codigo_retirada ON encomendas (codigo_retirada);\n\n-- 4. Tabela de Chamados (Vinculada pela Chave Composta do Morador)\nCREATE TABLE IF NOT EXISTS chamados (\n  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),\n  morador_bloco VARCHAR(20),\n  morador_andar VARCHAR(20),\n  morador_apartamento VARCHAR(20),\n  protocolo UUID UNIQUE NOT NULL,\n  status VARCHAR(30) NOT NULL DEFAULT 'ABERTO',\n  relato_morador TEXT,\n  resumo TEXT,\n  responsavel_whatsapp VARCHAR(20),\n  responsavel_chat_id VARCHAR(50),\n  dados_faltantes TEXT,\n  mensagem_resposta TEXT,\n  data_abertura TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n  data_fechamento TIMESTAMPTZ,\n  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n\n  CONSTRAINT fk_chamados_morador\n    FOREIGN KEY (morador_bloco, morador_andar, morador_apartamento)\n    REFERENCES moradores (bloco, andar, apartamento)\n    ON UPDATE CASCADE\n    ON DELETE SET NULL\n);\n\nALTER TABLE chamados ADD COLUMN IF NOT EXISTS responsavel_chat_id VARCHAR(50);\n\nCREATE INDEX IF NOT EXISTS idx_chamados_morador_status ON chamados (morador_bloco, morador_andar, morador_apartamento, status);\nCREATE INDEX IF NOT EXISTS idx_chamados_responsavel ON chamados (responsavel_whatsapp);\n\n-- 5. Função e Triggers de updated_at\nCREATE OR REPLACE FUNCTION atualizar_updated_at()\nRETURNS TRIGGER AS $$\nBEGIN\n  NEW.updated_at = NOW();\n  RETURN NEW;\nEND;\n$$ LANGUAGE plpgsql;\n\nDROP TRIGGER IF EXISTS trg_moradores_updated_at ON moradores;\nCREATE TRIGGER trg_moradores_updated_at\n  BEFORE UPDATE ON moradores\n  FOR EACH ROW EXECUTE FUNCTION atualizar_updated_at();\n\nDROP TRIGGER IF EXISTS trg_responsaveis_updated_at ON responsaveis;\nCREATE TRIGGER trg_responsaveis_updated_at\n  BEFORE UPDATE ON responsaveis\n  FOR EACH ROW EXECUTE FUNCTION atualizar_updated_at();\n\nDROP TRIGGER IF EXISTS trg_encomendas_updated_at ON encomendas;\nCREATE TRIGGER trg_encomendas_updated_at\n  BEFORE UPDATE ON encomendas\n  FOR EACH ROW EXECUTE FUNCTION atualizar_updated_at();\n\nDROP TRIGGER IF EXISTS trg_chamados_updated_at ON chamados;\nCREATE TRIGGER trg_chamados_updated_at\n  BEFORE UPDATE ON chamados\n  FOR EACH ROW EXECUTE FUNCTION atualizar_updated_at();\n\n-- 6. Retorno protegido contra valores undefined/null (para execução no n8n)\nSELECT\n  '{{ JSON.stringify($json.contexto || {}).replace(/'/g, \"''\") }}'::jsonb AS contexto,\n  '{{ JSON.stringify($json.morador || {}).replace(/'/g, \"''\") }}'::jsonb AS morador,\n  '{{ JSON.stringify($json.encomenda || {}).replace(/'/g, \"''\") }}'::jsonb AS encomenda,\n  '{{ JSON.stringify($json.chamado || {}).replace(/'/g, \"''\") }}'::jsonb AS chamado;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.8,
+      "position": [
+        592,
+        176
+      ],
+      "id": "d85f66c0-fa4b-4076-9661-e8c49d52c4da",
+      "name": "Execute a SQL query",
+      "credentials": {
+        "postgres": {
+          "id": "RShdjD2hVLmjIyBj",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH dados_etiqueta AS (\n  SELECT\n    NULLIF(TRIM($1::text), '') AS bloco,\n    NULLIF(TRIM($2::text), '') AS andar,\n    NULLIF(TRIM($3::text), '') AS apartamento,\n    NULLIF(TRIM($4::text), '') AS nome\n)\nSELECT\n  m.bloco,\n  m.andar,\n  m.apartamento,\n  m.nome,\n  m.whatsapp,\n  m.endereco,\n  m.complemento,\n  m.ativo\nFROM moradores m\nCROSS JOIN dados_etiqueta d\nWHERE m.ativo = TRUE\n  AND (\n    -- 1. Busca exata pela chave composta (bloco + andar + apartamento)\n    (\n      d.bloco IS NOT NULL AND d.andar IS NOT NULL AND d.apartamento IS NOT NULL\n      AND LOWER(m.bloco) = LOWER(d.bloco)\n      AND LOWER(m.andar) = LOWER(d.andar)\n      AND LOWER(m.apartamento) = LOWER(d.apartamento)\n    )\n    OR\n    -- 2. Busca por apartamento + bloco (quando a etiqueta omite o andar)\n    (\n      d.andar IS NULL AND d.bloco IS NOT NULL AND d.apartamento IS NOT NULL\n      AND LOWER(m.bloco) = LOWER(d.bloco)\n      AND LOWER(m.apartamento) = LOWER(d.apartamento)\n    )\n    OR\n    -- 3. Busca apenas por apartamento (quando a etiqueta omite bloco e andar)\n    (\n      d.bloco IS NULL AND d.andar IS NULL AND d.apartamento IS NOT NULL\n      AND LOWER(m.apartamento) = LOWER(d.apartamento)\n    )\n    OR\n    -- 4. Busca pelo nome do destinatário (caso o apartamento não tenha sido lido na etiqueta)\n    (\n      d.apartamento IS NULL AND d.nome IS NOT NULL\n      AND LOWER(m.nome) LIKE '%' || LOWER(d.nome) || '%'\n    )\n  )\nLIMIT 5;",
+        "options": {
+          "queryReplacement": "={{ [\n  $json.encomenda.destinatario_bloco ?? '',\n  $json.encomenda.destinatario_andar ?? '',\n  $json.encomenda.destinatario_apartamento ?? '',\n  $json.encomenda.destinatario_nome ?? ''\n] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        2400,
+        528
+      ],
+      "id": "1bfefebd-2242-42f2-be5b-e2649007ff61",
+      "name": "Buscar Morador1",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "RShdjD2hVLmjIyBj",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const itemAtual = $input.first().json;\n\n// 1. Busca segura do payload base (mantém seus UUIDs, protocolo, codigo_retirada e datas originais)\nlet base = null;\nconst nomesPossiveis = ['Estruturar Payload', 'Code in JavaScript'];\n\nfor (const nome of nomesPossiveis) {\n  try {\n    const encontrado = $(nome).first()?.json;\n    if (encontrado && encontrado.contexto && encontrado.encomenda) {\n      base = encontrado;\n      break;\n    }\n  } catch (e) {}\n}\n\nif (!base) {\n  base = {\n    contexto: itemAtual.contexto || {},\n    morador: {\n      id: null, nome: null, whatsapp: null, endereco: null,\n      apartamento: null, andar: null, bloco: null, complemento: null, ativo: null\n    },\n    encomenda: itemAtual.encomenda || {},\n    chamado: itemAtual.chamado || {}\n  };\n}\n\n// 2. Extrai o JSON retornado pelo agente\nconst rawOutput =\n  itemAtual.output ??\n  itemAtual.text ??\n  itemAtual.response ??\n  itemAtual.content ??\n  itemAtual;\n\nlet ia = {};\nif (typeof rawOutput === 'object' && rawOutput !== null && !rawOutput.contexto) {\n  ia = rawOutput;\n} else if (typeof rawOutput === 'string') {\n  try {\n    const limpo = rawOutput.replace(/```json/gi, '').replace(/```/g, '').trim();\n    const match = limpo.match(/\\{[\\s\\S]*\\}/);\n    ia = match ? JSON.parse(match[0]) : {};\n  } catch (e) {\n    ia = {};\n  }\n}\n\n// Helper: converte strings vazias \"\" ou espaços em null\nconst limparTexto = (valor) => {\n  if (valor === undefined || valor === null) return null;\n  const texto = String(valor).trim();\n  return texto.length > 0 ? texto : null;\n};\n\nconst imagemLegivel = Boolean(ia.imagem_legivel);\n\n// 3. Recupera o arquivo binário da imagem baixada (caso exista)\nlet binaryData = undefined;\ntry {\n  binaryData = $('Baixar Imagem1').first()?.binary;\n} catch (e) {}\n\n// 4. Monta o objeto consolidado final\nconst resultado = {\n  json: {\n    ...base,\n    contexto: {\n      ...base.contexto,\n      imagem_legivel: imagemLegivel\n    },\n    encomenda: {\n      ...base.encomenda,\n      destinatario_nome: limparTexto(ia.destinatario_nome) ?? base.encomenda.destinatario_nome ?? null,\n      destinatario_apartamento: limparTexto(ia.destinatario_apartamento) ?? base.encomenda.destinatario_apartamento ?? null,\n      destinatario_bloco: limparTexto(ia.destinatario_bloco) ?? base.encomenda.destinatario_bloco ?? null,\n      destinatario_andar: limparTexto(ia.destinatario_andar) ?? base.encomenda.destinatario_andar ?? null,\n      destinatario_endereco: limparTexto(ia.destinatario_endereco) ?? base.encomenda.destinatario_endereco ?? null,\n      dados_remetente: limparTexto(ia.dados_remetente) ?? base.encomenda.dados_remetente ?? null,\n      imagem_legivel: imagemLegivel\n    }\n  }\n};\n\nif (binaryData) {\n  resultado.binary = binaryData;\n}\n\nreturn [resultado];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2112,
+        528
+      ],
+      "id": "899833c3-845b-498b-9916-9edf669aa666",
+      "name": "Consolidar Dados"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Analise a etiqueta da encomenda na mídia anexada ou no texto/transcrição abaixo e extraia os dados para preencher o JSON.\n\nTexto/Transcrição:\n{{ $json.text || $('Normalizar Webhook').first().json.texto || $('Normalizar Webhook').first().json.caption || 'Analisar mídia anexada.' }}\n\nDados base de contexto (preserve os metadados existentes e preencha apenas os campos vazios encontrados na etiqueta):\n{{ JSON.stringify($('Estruturar Payload').first().json.encomenda || {}, null, 2) }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "=Você é um sistema de leitura óptica (OCR) e extração de dados de etiquetas de encomendas.\nAnalise a imagem, o áudio transcrito ou o texto fornecido e extraia exclusivamente as informações presentes na entrada.\n\nRegras obrigatórias:\n1. Retorne apenas um objeto JSON válido, sem blocos de markdown, sem explicações e sem texto adicional.\n2. Nunca invente, deduza ou complete informações ausentes. Se um dado não estiver claramente visível ou informado, preencha o campo com string vazia \"\" (não utilize null).\n3. Preserve exatamente como recebidos os metadados de sistema (id, morador_id, protocolo, codigo_retirada, status, media_url, data_recebimento, data_retirada, created_at, updated_at).\n4. Em \"destinatario_andar\", extraia apenas dígitos numéricos em formato texto (ex: \"4\"). Se não houver, deixe \"\".\n5. Defina \"imagem_legivel\" como true apenas se houver identificação clara de destinatário ou unidade; caso contrário, defina como false."
+        }
+      },
+      "id": "98c7d5c1-0507-43d2-b1b2-90e275945c90",
+      "name": "Extrair Dados IA",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [
+        1744,
+        528
+      ],
+      "alwaysOutputData": true,
+      "executeOnce": true,
+      "retryOnFail": true,
+      "waitBetweenTries": 5000,
+      "notesInFlow": false,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "df04c5a6-77dc-4240-b9a7-de0705bf35df",
+              "name": "session",
+              "value": "={{ $('Classificar').item.json.body.session }}",
+              "type": "string"
+            },
+            {
+              "name": "chat_id",
+              "value": "={{$json.body.payload.from}}",
+              "type": "string",
+              "id": "2f4c2374-f0db-42a9-8773-6671c62001f3"
+            },
+            {
+              "id": "be8d24fd-9011-4609-bf5c-0b959e7d418a",
+              "name": "event",
+              "value": "={{ $json.body.event }}",
+              "type": "string"
+            },
+            {
+              "name": "from_me",
+              "value": "={{$json.body.payload.fromMe}}",
+              "type": "boolean",
+              "id": "2aeedc25-108e-4029-820b-0f78caa2842f"
+            },
+            {
+              "name": "mime_type",
+              "value": "={{$json.body.payload.media?.mimetype || ''}}",
+              "type": "string",
+              "id": "40c9d4f2-d584-4413-8076-97ec149f6648"
+            },
+            {
+              "id": "dbc4c386-58b9-4ef4-9404-d4b949444d05",
+              "name": "media_url",
+              "value": "={{ $json.body.payload.media?.url?.replace('localhost','waha') || '' }}",
+              "type": "string"
+            },
+            {
+              "name": "temImagem",
+              "value": "={{ $json.body.payload.media && $json.body.payload.media.mimetype && $json.body.payload.media.mimetype.startsWith('image/') }}",
+              "type": "boolean",
+              "id": "838ff72d-a916-4256-87ff-106c7dbd94de"
+            },
+            {
+              "id": "75334704-a61b-4f09-b487-7fe81a23d8f2",
+              "name": "mensagem_de_grupos",
+              "value": "={{ $json.body.payload._data.Info.IsGroup }}",
+              "type": "boolean"
+            },
+            {
+              "id": "77738114-76e1-44fe-85a4-565979e7c814",
+              "name": "imagem_legivel",
+              "value": false,
+              "type": "boolean"
+            },
+            {
+              "id": "e1aadb5a-476b-407c-9a6f-d8468f79ba94",
+              "name": "morador_nome",
+              "value": "={{ '' }}",
+              "type": "string"
+            },
+            {
+              "id": "1051b61c-c4ee-4d4d-bb5a-bcceccb17cd9",
+              "name": "morador_whatsapp",
+              "value": "={{ '' }}",
+              "type": "string"
+            },
+            {
+              "id": "f9da82e7-4c92-4997-85a9-045256bf134c",
+              "name": "morador_endereco",
+              "value": "={{ '' }}",
+              "type": "string"
+            },
+            {
+              "id": "0752eac8-f1fb-454a-bc40-01a2162694b6",
+              "name": "morador_apartamento",
+              "value": "={{ '' }}",
+              "type": "string"
+            },
+            {
+              "id": "35ee5f6f-603f-469d-9b90-9d4dc83f5e19",
+              "name": "morador_andar",
+              "value": "={{ '' }}",
+              "type": "string"
+            },
+            {
+              "id": "25228021-7809-4744-af15-e6241eea1614",
+              "name": "morador_bloco",
+              "value": "={{ '' }}",
+              "type": "string"
+            },
+            {
+              "id": "ab7c06e2-81de-432d-8be2-9d395292577d",
+              "name": "morador_complemento",
+              "value": "={{ '' }}",
+              "type": "string"
+            },
+            {
+              "id": "74fed651-b890-4e8f-b921-524b1487ea6d",
+              "name": "encomenda_protocolo",
+              "value": "={{ '' }}",
+              "type": "string"
+            },
+            {
+              "id": "803d320b-8977-4036-aeb7-ff24056bd0bc",
+              "name": "=encomenda_data_recebimento",
+              "value": "={{ '' }}",
+              "type": "string"
+            },
+            {
+              "id": "61b1d0ca-f890-434f-9e3c-792225ad14f1",
+              "name": "=encomenda_data_retirada",
+              "value": "={{ '' }}",
+              "type": "string"
+            },
+            {
+              "id": "617acfa0-d9cb-4e70-aded-6af576b3ce3a",
+              "name": "encomenda_nome",
+              "value": "={{ '' }}",
+              "type": "string"
+            },
+            {
+              "id": "e2b521df-0362-4be2-bc3a-efd0ba8dee3a",
+              "name": "encomenda_apartamento",
+              "value": "={{ '' }}",
+              "type": "string"
+            },
+            {
+              "id": "62fbdcef-6ab7-4863-bf2b-9067496cb7a7",
+              "name": "encomenda_bloco",
+              "value": "={{ '' }}",
+              "type": "string"
+            },
+            {
+              "id": "e3c9d6f0-1bc8-4104-90dc-eda883d32a6d",
+              "name": "encomenda_andar",
+              "value": "={{ '' }}",
+              "type": "string"
+            },
+            {
+              "id": "81832016-6a4f-40a7-b5f1-142cac9a1b98",
+              "name": "encomenda_endereco",
+              "value": "={{ '' }}",
+              "type": "string"
+            },
+            {
+              "id": "95bdab83-6d76-421f-ae99-a53f678e81d2",
+              "name": "encomenda_dados_remetente",
+              "value": "={{ '' }}",
+              "type": "string"
+            },
+            {
+              "id": "62663f85-ae8c-4122-934e-4c3abddfd52d",
+              "name": "encomenda_codigo_retirada",
+              "value": "={{ '' }}",
+              "type": "string"
+            },
+            {
+              "id": "ea63d38c-9a00-4238-93a5-2c47213d6ed0",
+              "name": "chamado_novo",
+              "value": false,
+              "type": "boolean"
+            },
+            {
+              "id": "7714c8ba-d765-4ac4-a7c4-5a50da2a1115",
+              "name": "chamado_responsavel_nome",
+              "value": "={{ $json.body.payload._data.Info.PushName }}",
+              "type": "string"
+            },
+            {
+              "id": "5fc1c7ae-fdca-4c6c-9dd9-f473cb22b31b",
+              "name": "chamado_responsavel_whatsapp",
+              "value": "={{ $json.body.payload._data.Info.SenderAlt.substring(0,13) }}",
+              "type": "string"
+            },
+            {
+              "id": "8a71cbdf-edcc-4435-b4cf-df2860a4afb9",
+              "name": "chamado_relato",
+              "value": "={{$json.body.payload.body || ''}}",
+              "type": "string"
+            },
+            {
+              "id": "dee2749d-64fa-4356-9da7-52548a005c67",
+              "name": "chamado_protocolo",
+              "value": "={{ '' }}",
+              "type": "string"
+            },
+            {
+              "id": "1a942785-3af9-4c32-a0f5-6acdc01f4983",
+              "name": "chamado_resumo",
+              "value": "={{ '' }}",
+              "type": "string"
+            },
+            {
+              "id": "d3b6b120-04a1-49dc-89ee-09b7094413cb",
+              "name": "=chamado_dados_faltantes",
+              "value": "={{ '' }}",
+              "type": "string"
+            },
+            {
+              "id": "23654b57-b51e-4f2a-bbd4-0e431a756fce",
+              "name": "=chamado_status",
+              "value": "={{ '' }}",
+              "type": "string"
+            },
+            {
+              "id": "01bef8ab-d0b3-4951-afc8-e39520c6467e",
+              "name": "=chamado_data_abertura",
+              "value": "={{ '' }}",
+              "type": "string"
+            },
+            {
+              "id": "9bbeb8b1-abba-4a8b-9772-6ccebd5bc5fb",
+              "name": "chamado_data_fechamento",
+              "value": "={{ '' }}",
+              "type": "string"
+            },
+            {
+              "id": "003ecc1c-a5b1-41d8-9536-fc631845325e",
+              "name": "representante",
+              "value": "={{ $json.body.me.pushName }}",
+              "type": "string"
+            },
+            {
+              "id": "a05eb640-c3d2-4070-bb94-45a1f290bc1b",
+              "name": "representante_whatsapp",
+              "value": "={{ $json.body.me.id.substring(0,13) }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "de82616b-8f1d-470a-9a1c-59ac14c7a8ab",
+      "name": "Normalizar Webhook",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        256,
+        544
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const entrada = $input.first().json;\n\n// Busca segura dos dados do nó Normalizar (funciona mesmo se executado isoladamente)\nlet norm = entrada;\ntry {\n  const n = $('Extrai dados Webhook').first()?.json;\n  if (n) norm = n;\n} catch (e) {\n  norm = entrada;\n}\n\nconst agoraISO = new Date().toISOString();\n\n// Helper para gerar UUID v4\nconst gerarUUID = () =>\n  'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {\n    const r = (Math.random() * 16) | 0;\n    const v = c === 'x' ? r : (r & 0x3) | 0x8;\n    return v.toString(16);\n  });\n\n// Helper para converter string vazia \"\" ou undefined em null\nconst toNull = (val) =>\n  val !== undefined && val !== null && String(val).trim() !== \"\" ? String(val).trim() : null;\n\n// Helper para limpar número de WhatsApp (apenas dígitos, ignorando sufixos @c.us / @lid)\nconst limparTelefone = (tel) => {\n  const limpo = toNull(tel);\n  if (!limpo) return null;\n  const apenasNumero = String(limpo).split('@')[0].replace(/\\D/g, '');\n  return apenasNumero.length >= 10 ? apenasNumero : null;\n};\n\nconst remetenteWhatsapp = limparTelefone(norm.chamado_responsavel_whatsapp);\nconst responsavelWhatsapp = limparTelefone(norm.representante_whatsapp);\n\n// 1. Objeto MORADOR (100% vazio - será preenchido apenas após o SELECT no banco)\nconst morador = {\n  id: null,\n  nome: null,\n  whatsapp: null,\n  endereco: null,\n  apartamento: null,\n  andar: null,\n  bloco: null,\n  complemento: null,\n  ativo: null\n};\n\n// 2. Objeto ENCOMENDA\nconst encomenda = {\n  id:null,\n  morador_id: null,\n  protocolo: null,\n  codigo_retirada: null,\n  status: null,\n  destinatario_nome: null,\n  destinatario_apartamento: null,\n  destinatario_bloco: null,\n  destinatario_andar: null,\n  destinatario_endereco: null,\n  dados_remetente: null,\n  media_url: null,\n  imagem_legivel: null,\n  data_retirada: null,\n  data_coleta: null\n};\n\n// 3. Objeto CHAMADO (sem texto mockado em mensagem_resposta)\nconst chamado = {\n  id: null,\n  morador_id: null,\n  protocolo: null,\n  status: null,\n  relato_morador: null,\n  resumo: null,\n  responsavel_whatsapp: null,\n  responsavel_chat_id: null,\n  dados_faltantes: null,\n  mensagem_resposta: null,\n  data_abertura: null,\n  data_fechamento: null,\n};\n\n// 4. Retorno unificado\nreturn [\n  {\n    json: {\n      contexto: {\n        session: toNull(norm.session),\n        chat_id: toNull(norm.chat_id),\n        event: toNull(norm.event),\n        from_me: norm.from_me ?? false,\n        mensagem_de_grupos: norm.mensagem_de_grupos ?? false,\n        remetente_nome: norm.chamado_responsavel_nome,\n        remetente_whatsapp: norm.chamado_responsavel_whatsapp,\n        enviar_apenas_responsavel: Boolean(responsavelWhatsapp),\n        mime_type: toNull(norm.mime_type),\n        media_url: toNull(norm.media_url),\n        tem_imagem: norm.temImagem ?? false,\n        imagem_legivel: norm.imagem_legivel ?? false,\n      },\n      morador,\n      encomenda,\n      chamado\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        480,
+        544
+      ],
+      "id": "e7b6d418-ec7b-4277-a2a9-a795c11d8095",
+      "name": "Estruturar Payload"
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"destinatario_nome\": {\n      \"type\": \"string\",\n      \"description\": \"Nome completo do destinatário na etiqueta. Vazio se não encontrado.\"\n    },\n    \"destinatario_apartamento\": {\n      \"type\": \"string\",\n      \"description\": \"Número ou identificação do apartamento. Vazio se não encontrado.\"\n    },\n    \"destinatario_bloco\": {\n      \"type\": \"string\",\n      \"description\": \"Bloco ou torre do destinatário. Vazio se não encontrado.\"\n    },\n    \"destinatario_andar\": {\n      \"type\": \"string\",\n      \"description\": \"Apenas dígitos numéricos do andar (ex: 4). Vazio se não encontrado.\"\n    },\n    \"destinatario_endereco\": {\n      \"type\": \"string\",\n      \"description\": \"Endereço completo impresso na etiqueta. Vazio se não encontrado.\"\n    },\n    \"dados_remetente\": {\n      \"type\": \"string\",\n      \"description\": \"Nome da loja, transportadora ou remetente. Vazio se não encontrado.\"\n    },\n    \"imagem_legivel\": {\n      \"type\": \"boolean\",\n      \"description\": \"true apenas se houver identificação clara de destinatário ou unidade; caso contrário false.\"\n    }\n  },\n  \"required\": [\n    \"destinatario_nome\",\n    \"destinatario_apartamento\",\n    \"destinatario_bloco\",\n    \"destinatario_andar\",\n    \"destinatario_endereco\",\n    \"dados_remetente\",\n    \"imagem_legivel\"\n  ]\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        1888,
+        720
+      ],
+      "id": "5297e888-69af-46e5-aa65-cb4e98b4b087",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "jsCode": "// 1. Recupera o estado completo consolidado antes da consulta ao banco\nconst base = $('Consolidar Dados').first().json;\n\n// 2. Captura o resultado retornado pelo nó \"Buscar Morador1\"\nconst resultadosBanco = $input\n  .all()\n  .map((item) => item.json)\n  .filter((row) => row && row.apartamento && row.nome);\n\nconst moradorDb = resultadosBanco.length === 1 ? resultadosBanco[0] : null;\nconst multiplosMoradores = resultadosBanco.length > 1;\n\n// Helpers para geração de ID, Protocolo e Data atual (ISO)\nconst gerarUUID = () => {\n  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {\n    const r = (Math.random() * 16) | 0;\n    const v = c === 'x' ? r : (r & 0x3) | 0x8;\n    return v.toString(16);\n  });\n};\n\nconst agora = new Date();\nconst dataColetaISO = agora.toISOString();\nconst gerarProtocolo = () => {\n  const pad = (n) => String(n).padStart(2, '0');\n  const dataStr = `${agora.getFullYear()}${pad(agora.getMonth() + 1)}${pad(agora.getDate())}`;\n  const rand = Math.floor(1000 + Math.random() * 9000);\n  return `ENC-${dataStr}-${rand}`;\n};\n\n// 3. Monta o objeto \"morador\"\nconst morador = moradorDb\n  ? {\n      nome: moradorDb.nome ?? null,\n      whatsapp: moradorDb.whatsapp ?? null,\n      endereco: moradorDb.endereco ?? null,\n      apartamento: moradorDb.apartamento ?? null,\n      andar: moradorDb.andar ?? null,\n      bloco: moradorDb.bloco ?? null,\n      complemento: moradorDb.complemento ?? null,\n      ativo: moradorDb.ativo ?? true\n    }\n  : {\n      nome: null,\n      whatsapp: null,\n      endereco: null,\n      apartamento: null,\n      andar: null,\n      bloco: null,\n      complemento: null,\n      ativo: null\n    };\n\n// 4. Monta o objeto \"encomenda\" com todos os campos preenchidos (exceto data_retirada e codigo_retirada)\nconst { morador_id: _ignorarIdEnc, ...encomendaLimpa } = base.encomenda || {};\n\nconst encomenda = {\n  ...encomendaLimpa,\n  id: encomendaLimpa.id ?? gerarUUID(),\n  protocolo: encomendaLimpa.protocolo ?? gerarProtocolo(),\n  codigo_retirada: null,\n  status: encomendaLimpa.status ?? (moradorDb ? 'aguardando_retirada' : 'pendente_identificacao'),\n  destinatario_nome: encomendaLimpa.destinatario_nome ?? morador.nome ?? null,\n  destinatario_apartamento: encomendaLimpa.destinatario_apartamento ?? morador.apartamento ?? null,\n  destinatario_bloco: encomendaLimpa.destinatario_bloco ?? morador.bloco ?? null,\n  destinatario_andar: encomendaLimpa.destinatario_andar ?? morador.andar ?? null,\n  destinatario_endereco: encomendaLimpa.destinatario_endereco ?? morador.endereco ?? null,\n  dados_remetente: encomendaLimpa.dados_remetente ?? 'Não informado',\n  media_url: encomendaLimpa.media_url ?? base.contexto?.media_url ?? null,\n  imagem_legivel: encomendaLimpa.imagem_legivel ?? base.contexto?.imagem_legivel ?? false,\n  data_retirada: null,\n  data_coleta: dataColetaISO,\n  morador_bloco: morador.bloco,\n  morador_andar: morador.andar,\n  morador_apartamento: morador.apartamento\n};\n\n// 5. Monta o objeto \"chamado\" preservando os campos originais\nconst { morador_id: _ignorarIdCham, ...chamadoLimpo } = base.chamado || {};\nconst chamado = {\n  ...chamadoLimpo,\n  morador_bloco: base.chamado?.data_abertura == null ? null : morador.bloco,\n  morador_andar: base.chamado?.data_abertura == null ? null : morador.andar,\n  morador_apartamento: base.chamado?.data_abertura == null ? null : morador.apartamento\n};\n\n// 6. Entrega o JSON completo na saída\nreturn [\n  {\n    json: {\n      contexto: {\n        ...base.contexto,\n        morador_encontrado: Boolean(moradorDb),\n        multiplos_moradores: multiplosMoradores\n      },\n      morador,\n      encomenda,\n      chamado\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2624,
+        528
+      ],
+      "id": "ac8ec048-6391-4453-be26-ce1ed4860acd",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "d915ce4a-9f95-4b81-aaec-df30d3253f51",
+              "leftValue": "={{ $json.contexto.morador_encontrado }}",
+              "rightValue": "=",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "b85a959b-05eb-4b3f-ae2b-e3d96a1338c5",
+              "leftValue": "={{ $json.morador.ativo }}",
+              "rightValue": false,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": "",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        2912,
+        528
+      ],
+      "id": "5997b377-e9d3-4a61-aa78-1fab7d323866",
+      "name": "MORADOR ?"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "6ced8245-ab40-4307-b89c-0fcfaae84957",
+              "leftValue": "={{ $json.contexto.tem_imagem }}",
+              "rightValue": false,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        1024,
+        560
+      ],
+      "id": "b2fa340e-c611-42d0-bca1-eccaeca0e138",
+      "name": "ENCOMENDA ?"
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "= {{ $('Normalizar Webhook').item.json.chat_id }}",
+        "sessionTTL": 3600,
+        "contextWindowLength": 6
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryRedisChat",
+      "typeVersion": 1.6,
+      "position": [
+        1760,
+        1232
+      ],
+      "id": "85211106-144e-4d96-b191-1b08208f7242",
+      "name": "Memoria Triagem",
+      "credentials": {
+        "redis": {
+          "id": "d4KKBy4xJOSzjGUd",
+          "name": "Redis account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Morador identificado: {{ $('Estruturar Payload').first().json.morador?.nome || $('Filtra Morador').first().json.nome || 'Morador' }} | Bloco: {{ $('Estruturar Payload').first().json.morador?.bloco || $('Filtra Morador').first().json.bloco || 'N/A' }} | Apartamento: {{ $('Estruturar Payload').first().json.morador?.apartamento || $('Filtra Morador').first().json.apartamento || 'N/A' }}\nChamado em andamento: {{ $('Estruturar Payload').first().json.chamado?.relato_morador || 'Nenhum' }}\nEncomenda pendente: {{ JSON.stringify($('Estruturar Payload').first().json.encomenda || {}) }}\nMensagem atual do morador: \"{{ $('Normalizar Webhook').first().json.mensagem || $('Normalizar Webhook').first().json.texto || $('Normalizar Webhook').first().json.text || $('Normalizar Webhook').first().json.body || $('Normalizar Webhook').first().json.message || $('Normalizar Webhook').first().json.conteudo || $('Normalizar Webhook').first().json.chamado_relato || '' }}\"\nDados brutos recebidos: {{ JSON.stringify($('Normalizar Webhook').first().json) }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "Você é o assistente de portaria inteligente de um condomínio. Sua função é classificar a intenção da mensagem do morador e formular uma resposta inicial apenas quando necessário.\n\nATENÇÃO PRIORITÁRIA:\n- Leia o texto enviado pelo morador tanto em \"Mensagem atual do morador\" quanto dentro de \"Dados brutos recebidos\" (inclusive no campo \"chamado_relato\").\n- REGRA MÁXIMA DE ENCOMENDA (\"encomenda_resposta\"): Se o morador responder com palavras-chave de confirmação de leitura ou retirada de encomenda — como \"ok\", \"li\", \"ciente\", \"recebi\", \"retirei\", \"peguei\", \"já peguei\", \"obrigado pela encomenda\", ou mencionar encomenda/entrega/código de retirada — a intenção OBRIGATÓRIA é \"encomenda_resposta\" (NUNCA classifique \"ok\", \"li\", \"recebi\" ou \"retirei\" como \"atendimento_condominio\").\n- Se o morador escrever qualquer variação de \"chamado\", \"abrir chamado\", \"reclamação\", \"ocorrência\", \"problema\", \"vazamento\", \"quebrado\" ou \"manutenção\", a rota OBRIGATÓRIA é \"chamado_novo\" (NUNCA use \"atendimento_condominio\" nesses casos).\n- Use \"atendimento_condominio\" APENAS para saudações isoladas (\"oi\", \"olá\", \"bom dia\", \"boa tarde\", \"boa noite\") ou dúvidas gerais da portaria sem menção a encomendas ou problemas.\n\nREGRAS DE ATENDIMENTO E NÃO-REDUNDÂNCIA:\n1. DADOS JÁ CONHECIDOS: Você já recebe o Nome, Bloco e Apartamento do morador acima. NUNCA peça bloco, apartamento, nome ou telefone ao morador.\n2. SEM SAUDAÇÕES REPETITIVAS: Não repita \"Olá, [Nome]!\" se já houver um chamado em andamento ou conversa ativa. Seja direto, educado e objetivo, como um porteiro eficiente.\n3. ROTA \"encomenda_resposta\": Use sempre que o morador responder sobre encomendas ou enviar confirmações como \"OK\", \"LI\", \"CIENTE\", \"RECEBI\" ou \"RETIREI\".\n4. ROTA \"chamado_novo\":\n   - Se o morador disser apenas \"quero abrir um chamado\" / \"abrir chamado\" / \"preciso abrir um chamado\" (sem descrever o problema), classifique como \"chamado_novo\" e escreva em \"resposta_morador\": \"Claro! Por favor, descreva qual é o problema para que eu possa registrar o seu chamado na portaria.\"\n   - Se o morador JÁ descreveu o problema (ex.: \"vazamento na torneira\", \"luz queimada\", \"barulho no corredor\") ou está respondendo ao pedido de descrição anterior, classifique imediatamente como \"chamado_novo\" e deixe \"resposta_morador\" com uma confirmação breve (ex.: \"Certo, estou registrando seu chamado...\"), SEM fazer perguntas extras sobre horário, autorização ou área privativa.\n5. ROTA \"chamado_atualizacao\": Use apenas se o morador pedir explicitamente status, cancelamento, reabertura ou confirmação de um protocolo de chamado existente.\n6. ROTA \"atendimento_condominio\": Use apenas para dúvidas gerais da portaria, regras do condomínio ou saudações simples sem intenção de abrir chamado ou confirmar encomenda (ex.: \"Olá! Sou o assistente da portaria do condomínio. Como posso ajudar?\").\n\nResponda estritamente no formato estruturado configurado no seu Output Parser."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        1712,
+        1024
+      ],
+      "id": "c4297438-5392-40ee-90d1-802059da125e",
+      "name": "Agente Triagem",
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"intencao\": {\n      \"type\": \"string\",\n      \"enum\": [\n        \"encomenda_resposta\",\n        \"chamado_novo\",\n        \"chamado_atualizacao\",\n        \"atendimento_condominio\"\n      ],\n      \"description\": \"Classificação obrigatória da intenção do morador.\"\n    },\n    \"acao_encomenda\": {\n      \"type\": \"string\",\n      \"enum\": [\n        \"confirmar_leitura\",\n        \"confirmar_retirada\",\n        \"consultar_encomenda\",\n        \"nenhuma\"\n      ],\n      \"description\": \"Sub-ação quando a intenção for encomenda_resposta (ex: confirmar_leitura para OK/LI/CIENTE, confirmar_retirada para RECEBI/RETIREI).\"\n    },\n    \"codigo_retirada\": {\n      \"type\": \"string\",\n      \"description\": \"Código de retirada informado pelo morador, se houver.\"\n    },\n    \"resposta_morador\": {\n      \"type\": \"string\",\n      \"description\": \"Resposta direta e objetiva para o morador, quando aplicável.\"\n    },\n    \"confianca\": {\n      \"type\": \"number\",\n      \"description\": \"Nível de confiança da classificação entre 0 e 1.\"\n    }\n  },\n  \"required\": [\n    \"intencao\",\n    \"acao_encomenda\",\n    \"resposta_morador\",\n    \"confianca\"\n  ]\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        1920,
+        1216
+      ],
+      "id": "3b3ee03e-9545-4795-8d9e-176389e3d595",
+      "name": "Triagem Output Parser"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "cd7a9683-cc45-4015-99f5-a3e9715e79d0",
+              "leftValue": "={{ $json.ativo }}",
+              "rightValue": false,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        1440,
+        1040
+      ],
+      "id": "efdaf906-e66a-47ba-9d40-6d88d1a96eb5",
+      "name": "E MORADOR?"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT *\nFROM moradores\nWHERE whatsapp = $1\n  AND ativo = true\nLIMIT 1;",
+        "options": {
+          "queryReplacement": "={{ $json.contexto.remetente_whatsapp }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.8,
+      "position": [
+        1216,
+        1040
+      ],
+      "id": "e85c7df6-12ee-4531-b814-d3bade260712",
+      "name": "Filtra Morador",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "RShdjD2hVLmjIyBj",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const base = { ...$json };\ndelete base.output;\ndelete base.text;\ndelete base.response;\n\n// Busca a flag de legibilidade onde ela realmente está (dentro de contexto ou encomenda)\nconst legivelContexto = Boolean(\n  base.contexto?.imagem_legivel ??\n  base.encomenda?.imagem_legivel ??\n  base.imagem_legivel ??\n  false\n);\n\nconst rawText = String(\n  $json.output ??\n  $json.text ??\n  $json.response ??\n  ''\n).trim();\n\nlet parsed = {};\nlet parseSuccess = false;\n\nif (rawText) {\n  try {\n    const cleanJson = rawText\n      .replace(/^```(?:json)?\\s*/i, '')\n      .replace(/\\s*```$/i, '')\n      .trim();\n    parsed = JSON.parse(cleanJson);\n    parseSuccess = true;\n  } catch (e) {\n    parseSuccess = false;\n  }\n}\n\n// Calcula o booleano real de validação\nconst validacaoOk = Boolean(\n  (parsed.eh_encomenda ?? true) &&\n  (parsed.legivel ?? parsed.imagem_legivel ?? legivelContexto)\n);\n\nreturn {\n  json: {\n    ...base,\n    ...parsed,\n    validacao_ok: validacaoOk,\n    parse_success: parseSuccess\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3264,
+        464
+      ],
+      "id": "35697113-2f80-49c9-8260-9de2acf0c9cc",
+      "name": "Interpretar IA"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "if-valido",
+              "leftValue": "={{ String($json.validacao_ok) }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        3504,
+        464
+      ],
+      "id": "f6311c21-ea35-4cec-8cc8-8251faee8418",
+      "name": "Validacao OK?"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Lê os dados que já chegam estruturados da entrada ($json)\nconst input = $input.item.json || {};\nconst contexto = input.contexto || {};\nconst morador = input.morador || {};\nconst encomenda = input.encomenda || {};\n\n// Gera ou reaproveita o código único e o código de retirada\nconst codigo = input.codigo || encomenda.codigo || `ENC-${Math.floor(100000 + Math.random() * 900000)}`;\nconst codigoRetirada = input.codigo_retirada || encomenda.codigo_retirada || String(Math.floor(1000 + Math.random() * 9000));\n\n// Normaliza o WhatsApp do morador\nlet moradorWhatsapp = morador.whatsapp || input.morador_whatsapp || null;\nif (moradorWhatsapp) {\n  const apenasNumeros = String(moradorWhatsapp).replace(/\\D/g, '');\n  if (apenasNumeros.length >= 10) {\n    moradorWhatsapp = apenasNumeros.startsWith('55') ? apenasNumeros : `55${apenasNumeros}`;\n  }\n}\n\nconst moradorEncontrado = Boolean(\n  contexto.morador_encontrado ?? (morador.bloco && morador.apartamento && moradorWhatsapp)\n);\n\nreturn {\n  json: {\n    ...input,\n    session: contexto.session || 'default',\n    chat_id: contexto.chat_id || '',\n    codigo,\n    codigo_retirada: codigoRetirada,\n    morador_encontrado: moradorEncontrado,\n    morador_cadastrado: moradorEncontrado,\n    morador_nome: morador.nome || encomenda.destinatario_nome || '',\n    morador_whatsapp: moradorWhatsapp,\n    morador_bloco: morador.bloco || encomenda.destinatario_bloco || '',\n    morador_andar: morador.andar || encomenda.destinatario_andar || '',\n    morador_apartamento: morador.apartamento || encomenda.destinatario_apartamento || '',\n    morador_endereco: morador.endereco || encomenda.destinatario_endereco || '',\n    destinatario_nome: encomenda.destinatario_nome || morador.nome || '',\n    destinatario_bloco: encomenda.destinatario_bloco || morador.bloco || '',\n    destinatario_andar: encomenda.destinatario_andar || morador.andar || '',\n    destinatario_apartamento: encomenda.destinatario_apartamento || morador.apartamento || '',\n    destinatario_endereco: encomenda.destinatario_endereco || morador.endereco || '',\n    dados_remetente: encomenda.dados_remetente || encomenda.remetente || '',\n    media_url: contexto.media_url || encomenda.media_url || '',\n    imagem_legivel: Boolean(contexto.imagem_legivel ?? input.validacao_ok ?? true)\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3968,
+        384
+      ],
+      "id": "ed3e12c3-63ef-4a37-a343-66f7e13c2805",
+      "name": "Preparar Encomenda"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO public.encomendas (\n    protocolo,\n    morador_bloco,\n    morador_andar,\n    morador_apartamento,\n    codigo_retirada,\n    status,\n    destinatario_nome,\n    destinatario_bloco,\n    destinatario_andar,\n    destinatario_apartamento,\n    destinatario_endereco,\n    dados_remetente,\n    media_url,\n    imagem_legivel\n)\nVALUES (\n    gen_random_uuid(),\n    NULLIF(trim($1), ''),\n    NULLIF(trim($2), ''),\n    NULLIF(trim($3), ''),\n    $4,\n    'AGUARDANDO_RETIRADA',\n    NULLIF(trim($5), ''),\n    NULLIF(trim($6), ''),\n    NULLIF(trim($7), ''),\n    NULLIF(trim($8), ''),\n    NULLIF(trim($9), ''),\n    NULLIF(trim($10), ''),\n    NULLIF(trim($11), ''),\n    COALESCE($12::boolean, TRUE)\n)\nRETURNING\n    *,\n    protocolo AS codigo,\n    CONCAT('Bloco ', morador_bloco, ' - Apto ', morador_apartamento) AS unidade;",
+        "options": {
+          "queryReplacement": "={{ [\n  $json.morador_bloco || $json.morador?.bloco || '',\n  $json.morador_andar || $json.morador?.andar || '',\n  $json.morador_apartamento || $json.morador?.apartamento || '',\n  $json.codigo_retirada || '',\n  $json.destinatario_nome || $json.morador_nome || '',\n  $json.destinatario_bloco || $json.morador_bloco || '',\n  $json.destinatario_andar || $json.morador_andar || '',\n  $json.destinatario_apartamento || $json.morador_apartamento || '',\n  $json.destinatario_endereco || $json.morador_endereco || '',\n  $json.dados_remetente || '',\n  $json.media_url || $json.contexto?.media_url || '',\n  $json.imagem_legivel ?? true\n] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        4256,
+        384
+      ],
+      "id": "ce0d7367-b4c5-4d37-b923-7e6e4a35e422",
+      "name": "Criar Encomenda",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "RShdjD2hVLmjIyBj",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "Chatting",
+        "operation": "Send Text",
+        "session": "={{ $('Preparar Encomenda').first().json.session || $('Normalizar Webhook').first().json.session || 'default' }}",
+        "chatId": "={{ `${String($('Preparar Encomenda').first().json.morador_whatsapp || '').replace(/\\D/g, '')}@c.us` }}",
+        "text": "={{ `Olá, ${$('Criar Encomenda').first().json.morador_nome}! 📦\\n\\nChegou uma encomenda (${$('Criar Encomenda').first().json.transportadora}) para a unidade *${$('Criar Encomenda').first().json.unidade}*.\\nCódigo: *${$('Criar Encomenda').first().json.codigo}*\\n\\n• Responda *OK* ou *LI* para confirmar a leitura deste aviso.\\n• Responda *RECEBI* ou *RETIREI* quando retirar na portaria.` }}",
+        "requestOptions": {}
+      },
+      "type": "n8n-nodes-waha.WAHA",
+      "typeVersion": 202411,
+      "position": [
+        4464,
+        384
+      ],
+      "id": "25dc5136-5aa8-434c-adca-4792a06f8add",
+      "name": "Avisar Morador",
+      "alwaysOutputData": true,
+      "credentials": {
+        "wahaApi": {
+          "id": "PQRcGzgOgnmLCusF",
+          "name": "WAHA account"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE public.encomendas\nSET updated_at = NOW()\nWHERE protocolo = $1::uuid;\n\nINSERT INTO public.eventos_metricas (fluxo, protocolo, metrica, valor_texto)\nVALUES ('encomenda', $1::uuid, 'aviso_disponibilizado', 'whatsapp');",
+        "options": {
+          "queryReplacement": "={{ [ $('Criar Encomenda').first()?.json?.protocolo || '' ] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        4816,
+        368
+      ],
+      "id": "e626a58f-dfc9-4857-bded-ba88995c5f5c",
+      "name": "Registrar Aviso",
+      "credentials": {
+        "postgres": {
+          "id": "RShdjD2hVLmjIyBj",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE public.encomendas SET erro_envio = $2 WHERE protocolo = $1;\nINSERT INTO public.eventos_metricas (fluxo, protocolo, metrica, valor_texto) VALUES ('encomenda', $1, 'falha_envio', $2);",
+        "options": {
+          "queryReplacement": "={{ $('Criar Encomenda').item.json.protocolo }},={{ ($json.error && $json.error.message) ? String($json.error.message).replace(/,/g, ';').slice(0, 180) : 'erro_envio' }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        4832,
+        528
+      ],
+      "id": "86025d6d-d335-4e89-b38d-b093bb026101",
+      "name": "Registrar Falha Envio",
+      "credentials": {
+        "postgres": {
+          "id": "RShdjD2hVLmjIyBj",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "Chatting",
+        "operation": "Send Text",
+        "session": "={{ $('Normalizar Webhook').first().json.session }}",
+        "chatId": "={{ $('Normalizar Webhook').first().json.chat_id }}",
+        "text": "={{ $('Validacao OK?').isExecuted && $('Validacao OK?').first().json.resumo\n  ? `⚠️ *Não foi possível registrar a encomenda.*\\n\\n*Motivo:* ${$('Validacao OK?').first().json.resumo}\\n\\nPor favor, envie uma nova foto bem focada e iluminada onde apareçam claramente o *nome do destinatário*, *bloco* e *apartamento*.`\n  : '⚠️ *Não foi possível baixar ou validar a foto enviada.*\\n\\nPor favor, envie novamente uma foto nítida da etiqueta onde apareçam o *nome*, *bloco* e *apartamento* do morador.' }}",
+        "requestOptions": {}
+      },
+      "type": "n8n-nodes-waha.WAHA",
+      "typeVersion": 202411,
+      "position": [
+        4144,
+        544
+      ],
+      "id": "89f88f73-d401-45f3-ad3f-fe0bea9a651b",
+      "name": "Avisar Portaria Foto Invalida",
+      "credentials": {
+        "wahaApi": {
+          "id": "PQRcGzgOgnmLCusF",
+          "name": "WAHA account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO public.eventos_metricas (\n    fluxo,\n    protocolo,\n    metrica,\n    valor_texto\n)\nVALUES (\n    'encomenda',\n    NULL,\n    'validacao_reprovada',\n    $1\n);",
+        "options": {
+          "queryReplacement": "={{\n[\n  JSON.stringify({\n    motivo: $json.motivo,\n    eh_encomenda: $json.eh_encomenda,\n    legivel: $json.legivel,\n    remetente: $json.remetente,\n    destinatario_nome: $json.destinatario_nome,\n    numero: $json.numero,\n    bloco: $json.bloco,\n    andar: $json.andar,\n    complemento: $json.complemento,\n    resumo: $json.resumo\n  })\n]\n}}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        3920,
+        544
+      ],
+      "id": "799bc098-78e2-4b15-87c1-ff94a9ba57ef",
+      "name": "Metrica Validacao Reprovada",
+      "credentials": {
+        "postgres": {
+          "id": "RShdjD2hVLmjIyBj",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "Chatting",
+        "operation": "Send Text",
+        "session": "={{ $('Normalizar Webhook').item.json.session }}",
+        "chatId": "={{ $('Normalizar Webhook').item.json.chat_id }}",
+        "text": "={{ $('Agente Triagem').item.json.output.resposta_morador }}",
+        "requestOptions": {}
+      },
+      "type": "n8n-nodes-waha.WAHA",
+      "typeVersion": 202411,
+      "position": [
+        2176,
+        1536
+      ],
+      "id": "7c4e8849-cc8a-4824-aa7f-05e3160ea44d",
+      "name": "Resposta Morador",
+      "credentials": {
+        "wahaApi": {
+          "id": "PQRcGzgOgnmLCusF",
+          "name": "WAHA account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"resumo\": {\n      \"type\": \"string\",\n      \"description\": \"Resumo impessoal do relato em até 20 palavras\"\n    },\n    \"categoria\": {\n      \"type\": \"string\",\n      \"enum\": [\"manutencao\", \"limpeza\", \"seguranca\", \"barulho\", \"outros\"]\n    },\n    \"prioridade\": {\n      \"type\": \"string\",\n      \"enum\": [\"baixa\", \"media\", \"alta\"]\n    },\n    \"dados_faltantes\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"string\"\n      },\n      \"description\": \"Lista do que falta descrever; array vazio apenas quando o problema estiver claro\"\n    },\n    \"pergunta\": {\n      \"type\": \"string\",\n      \"description\": \"Mensagem direta pedindo detalhes ao morador; vazio apenas se dados_faltantes for []\"\n    },\n    \"motivo\": {\n      \"type\": \"string\",\n      \"description\": \"Justificativa objetiva em 1 frase\"\n    }\n  },\n  \"required\": [\n    \"resumo\",\n    \"categoria\",\n    \"prioridade\",\n    \"dados_faltantes\",\n    \"pergunta\",\n    \"motivo\"\n  ]\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        4112,
+        1392
+      ],
+      "id": "ef11b389-67d3-43a3-90ea-998023305a67",
+      "name": "Structured Output Parser1"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH morador_autorizado AS (\n  SELECT m.bloco, m.andar, m.apartamento\n  FROM public.moradores m\n  WHERE m.ativo = true AND CASE WHEN length(regexp_replace(m.whatsapp, '[^0-9]', '', 'g')) IN (10,11)\n  THEN '55' || regexp_replace(m.whatsapp, '[^0-9]', '', 'g')\n  ELSE regexp_replace(m.whatsapp, '[^0-9]', '', 'g') END = $1\n    AND $1 ~ '^55[0-9]{10,11}$'\n), candidatas AS (\n  SELECT e.* FROM public.encomendas e\n  JOIN morador_autorizado m ON m.bloco=e.morador_bloco\n    AND m.andar=e.morador_andar AND m.apartamento=e.morador_apartamento\n  WHERE e.status='AGUARDANDO_RETIRADA'\n    AND (SELECT count(*) FROM morador_autorizado)=1\n    AND ($2='' OR e.codigo_retirada=$2 OR e.protocolo::text=$2)\n    AND $3::boolean = true\n)\nSELECT CASE WHEN count(*)=1 THEN max(protocolo::text) ELSE '' END AS protocolo,\n  CASE WHEN count(*)=1 THEN max(codigo_retirada) ELSE '' END AS codigo_retirada,\n  count(*)::integer AS correspondencias\nFROM candidatas;",
+        "options": {
+          "queryReplacement": "={{ [$json.morador_whatsapp, $json.seletor || '', $json.comando_valido === true] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.8,
+      "position": [
+        3184,
+        816
+      ],
+      "id": "fa44da98-c1e9-403a-ab6b-6b42c3fc5255",
+      "name": "Buscar Encomenda Pendente",
+      "credentials": {
+        "postgres": {
+          "id": "RShdjD2hVLmjIyBj",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.2,
+      "position": [
+        1568,
+        1232
+      ],
+      "id": "5350fe78-c510-48e9-86e1-fb5882c1e045",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "WEtNSUPHCvPHNk9J",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.2,
+      "position": [
+        1600,
+        736
+      ],
+      "id": "2b573a0f-8c49-4028-82e1-d0ee62cc6cc3",
+      "name": "Google Gemini Chat Model1",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "WEtNSUPHCvPHNk9J",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.2,
+      "position": [
+        3840,
+        1392
+      ],
+      "id": "84f30c48-b100-4e5a-bf05-7b0f4fddddc4",
+      "name": "Google Gemini Chat Model2",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "WEtNSUPHCvPHNk9J",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Encomenda Aberta?": {
+      "main": [
+        [
+          {
+            "node": "Registrar Evento Resposta",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Metrica Sem Correspondencia",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validar Evento": {
+      "main": [
+        [],
+        [
+          {
+            "node": "ENCOMENDA ?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rotear": {
+      "main": [
+        [
+          {
+            "node": "EF_Encomenda_Resposta",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "IA Triagem Chamado",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "EF_Consultar_Chamados",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Resposta Morador",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Classificar": {
+      "main": [
+        [
+          {
+            "node": "Normalizar Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IA Triagem Chamado": {
+      "main": [
+        [
+          {
+            "node": "Interpretar Triagem",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Interpretar Triagem": {
+      "main": [
+        [
+          {
+            "node": "Faltam Dados?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Faltam Dados?": {
+      "main": [
+        [
+          {
+            "node": "Registrar Aguardando Dados",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Criar Chamado Confirmado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Registrar Aguardando Dados": {
+      "main": [
+        [
+          {
+            "node": "Perguntar Dados Faltantes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Perguntar Dados Faltantes": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Metrica Falha Envio Chamado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Criar Chamado Confirmado": {
+      "main": [
+        [
+          {
+            "node": "Responder Protocolo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Responder Protocolo": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Metrica Falha Envio Chamado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Chamado Ativo": {
+      "main": [
+        [
+          {
+            "node": "Preparar Comando",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar Comando": {
+      "main": [
+        [
+          {
+            "node": "Qual Comando?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Qual Comando?": {
+      "main": [
+        [
+          {
+            "node": "Chamado Nao Encontrado",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Buscar Ultimo Evento",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Confirmar Chamado",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Resolver Chamado",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Reabrir Chamado",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Cancelar Chamado",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Comando Nao Reconhecido",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Ultimo Evento": {
+      "main": [
+        [
+          {
+            "node": "Responder Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Confirmar Chamado": {
+      "main": [
+        [
+          {
+            "node": "Avisar Responsavel Confirmacao",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Avisar Responsavel Confirmacao": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Metrica Falha Envio Chamado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resolver Chamado": {
+      "main": [
+        [
+          {
+            "node": "Avisar Morador Resolvido",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reabrir Chamado": {
+      "main": [
+        [
+          {
+            "node": "Avisar Responsavel Reabertura",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cancelar Chamado": {
+      "main": [
+        [
+          {
+            "node": "Avisar Morador Cancelado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Memoria Chamado": {
+      "ai_memory": [
+        [
+          {
+            "node": "IA Triagem Chamado",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "EF_Encomenda_Resposta": {
+      "main": [
+        [
+          {
+            "node": "Parse_Encomenda_Resposta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "EF_Consultar_Chamados": {
+      "main": [
+        [
+          {
+            "node": "Parse_Consultar_Chamados",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse_Encomenda_Resposta": {
+      "main": [
+        [
+          {
+            "node": "Buscar Encomenda Pendente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse_Consultar_Chamados": {
+      "main": [
+        [
+          {
+            "node": "Buscar Chamado Ativo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Baixar Imagem1": {
+      "main": [
+        [
+          {
+            "node": "Extrair Dados IA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute a SQL query": {
+      "main": [
+        []
+      ]
+    },
+    "Consolidar Dados": {
+      "main": [
+        [
+          {
+            "node": "Buscar Morador1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extrair Dados IA": {
+      "main": [
+        [
+          {
+            "node": "Consolidar Dados",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalizar Webhook": {
+      "main": [
+        [
+          {
+            "node": "Estruturar Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Estruturar Payload": {
+      "main": [
+        [
+          {
+            "node": "Validar Evento",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Extrair Dados IA",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Morador1": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "MORADOR ?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ENCOMENDA ?": {
+      "main": [
+        [
+          {
+            "node": "Baixar Imagem1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Filtra Morador",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Memoria Triagem": {
+      "ai_memory": [
+        [
+          {
+            "node": "Agente Triagem",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Triagem Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Agente Triagem",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "E MORADOR?": {
+      "main": [
+        [
+          {
+            "node": "Agente Triagem",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filtra Morador": {
+      "main": [
+        [
+          {
+            "node": "E MORADOR?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Interpretar IA": {
+      "main": [
+        [
+          {
+            "node": "Validacao OK?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validacao OK?": {
+      "main": [
+        [
+          {
+            "node": "Preparar Encomenda",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Metrica Validacao Reprovada",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar Encomenda": {
+      "main": [
+        [
+          {
+            "node": "Criar Encomenda",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Avisar Morador": {
+      "main": [
+        [
+          {
+            "node": "Registrar Aviso",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Registrar Falha Envio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MORADOR ?": {
+      "main": [
+        [
+          {
+            "node": "Interpretar IA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agente Triagem": {
+      "main": [
+        [
+          {
+            "node": "Rotear",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resposta Morador": {
+      "main": [
+        []
+      ]
+    },
+    "Structured Output Parser1": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "IA Triagem Chamado",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Metrica Validacao Reprovada": {
+      "main": [
+        [
+          {
+            "node": "Avisar Portaria Foto Invalida",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Criar Encomenda": {
+      "main": [
+        [
+          {
+            "node": "Avisar Morador",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Registrar Evento Resposta": {
+      "main": [
+        [
+          {
+            "node": "Confirmar ao Morador",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Metrica Sem Correspondencia": {
+      "main": [
+        [
+          {
+            "node": "Morador Sem Encomenda",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Encomenda Pendente": {
+      "main": [
+        [
+          {
+            "node": "Encomenda Aberta?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Agente Triagem",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Extrair Dados IA",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model2": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "IA Triagem Chamado",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "99d9ae5a-4f3a-4ea0-9509-49eba0aa404b",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "8f5bdd7cf62844bb4d4c2312de292b038e91d0d30b159d0e5276929cda802364"
+  },
+  "nodeGroups": [],
+  "id": "1QaDxJzkywCS0HJD",
+  "tags": []
+}
