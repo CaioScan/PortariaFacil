@@ -4,7 +4,7 @@ Documento descritivo do comportamento do workflow `assistent_service_n8n` (nome 
 Foi produzido a partir da leitura do arquivo [assistent_service_n8n.json](assistent_service_n8n.json) e do schema em [schema_assistent_n8n](schema_assistent_n8n).
 Descreve o que está no arquivo; não substitui um teste funcional executado.
 
-- Workflow ativo: `active: true`
+- Workflow exportado inativo: `active: false`; configurar credenciais e validar antes de ativar.
 - Ordem de execução: `v1` / `binaryMode: separate`
 - Instância: n8n em Docker (`schedule_n8n/docker-compose.yml`), WAHA e PostgreSQL locais
 - Integrações: WAHA (WhatsApp), PostgreSQL, Redis (memória de IA), Google Gemini (modelo de linguagem)
@@ -144,11 +144,11 @@ Verifica `contexto.tem_imagem`.
 4. `Rotear` (Switch) — encaminha para uma das quatro rotas conforme `intencao`.
 
 ### 4.1 Rota `encomenda_resposta`
-- `EF_Encomenda_Resposta` (Set) → `Parse_Encomenda_Resposta` (Code): define a ação — `confirmar_retirada` quando o texto indica "recebi/retirei/peguei"; caso contrário `confirmar_leitura`.
-- `Buscar Encomenda Pendente` (Postgres): procura encomenda `AGUARDANDO_RETIRADA` pela unidade (bloco/andar/apartamento) ou pelo WhatsApp; se não achar, usa um fallback (última pendente).
+- `EF_Encomenda_Resposta` (Set) → `Parse_Encomenda_Resposta` (Code): valida o telefone integral do remetente contra o cadastro ativo retornado por `Filtra Morador`, sem usar identidade ou código da IA. Somente comandos explícitos são aceitos; negações como "não recebi" não confirmam retirada.
+- `Buscar Encomenda Pendente` (Postgres): procura exclusivamente encomendas `AGUARDANDO_RETIRADA` vinculadas ao morador identificado. Só retorna protocolo quando há uma única correspondência; múltiplas pendências exigem código ou UUID enviado pelo morador. Não existe fallback global.
 - `Encomenda Aberta?` (IF, com base em `protocolo`):
-  - **Sim** → `Registrar Evento Resposta` (marca `RETIRADA` e `data_retirada` quando a ação é retirada) → `Confirmar ao Morador` (confirma leitura ou retirada).
-  - **Não** → `Metrica Sem Correspondencia` (métrica `resposta_sem_encomenda`) → `Morador Sem Encomenda` (avisa que não há encomenda pendente).
+  - **Sim** → `Registrar Evento Resposta` revalida o remetente, cadastro ativo, unidade completa, protocolo, código e status antes da baixa → `Confirmar ao Morador` apenas se a atualização retornar um registro.
+  - **Não** → `Metrica Sem Correspondencia` (métrica `resposta_sem_encomenda`) → `Morador Sem Encomenda` (orienta informar código/protocolo, sem alterar registros).
 
 ### 4.2 Rota `chamado_novo`
 - `IA Triagem Chamado` (Agente LangChain + Google Gemini + memória Redis `Memoria Chamado` + `Structured Output Parser1`) — consolida o relato e decide se já é possível abrir o chamado. Preenche `resumo` (≤ 20 palavras), `categoria` (manutencao/limpeza/seguranca/barulho/outros), `prioridade` (baixa/media/alta) e `dados_faltantes`. Bloco/apartamento nunca entram em `dados_faltantes`.
@@ -210,7 +210,7 @@ Há também o nó avulso `Execute a SQL query` (Postgres), **sem conexões**, qu
 
 ## 7. Observações e limites
 
-- O workflow está marcado como ativo e depende de WAHA, PostgreSQL e Redis em execução (ver `schedule_n8n/docker-compose.yml`).
+- O workflow é exportado inativo e depende de configuração das credenciais no cofre do n8n e de WAHA, PostgreSQL e Redis em execução (ver `schedule_n8n/README.md`).
 - Pontos de término silencioso: eventos descartados em `Validar Evento`, morador não cadastrado em `E MORADOR?` e morador não encontrado/ambíguo em `MORADOR ?` — nesses casos nenhuma mensagem é respondida.
 - `Estruturar Payload` procura o nó `Extrai dados Webhook`, que não existe neste arquivo; o código trata isso com fallback para a própria entrada.
 - Detalhes de layout/posição dos nós no canvas não foram documentados por não afetarem o comportamento.

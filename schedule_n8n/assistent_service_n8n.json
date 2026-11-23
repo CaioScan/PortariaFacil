@@ -38,9 +38,9 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "WITH atualizado AS (\n  UPDATE public.encomendas\n  SET\n    status = CASE WHEN $2 = 'confirmar_retirada' THEN 'RETIRADA' ELSE status END,\n    data_retirada = CASE WHEN $2 = 'confirmar_retirada' THEN NOW() ELSE data_retirada END,\n    updated_at = NOW()\n  WHERE protocolo = $1::uuid\n  RETURNING protocolo, codigo_retirada, status, destinatario_nome, morador_bloco, morador_apartamento\n)\nSELECT * FROM atualizado;",
+        "query": "WITH atualizado AS (\n  UPDATE public.encomendas e\n  SET status=CASE WHEN $2='confirmar_retirada' THEN 'RETIRADA' ELSE e.status END,\n    data_retirada=CASE WHEN $2='confirmar_retirada' THEN NOW() ELSE e.data_retirada END,\n    updated_at=NOW()\n  WHERE e.protocolo=$1::uuid AND e.status='AGUARDANDO_RETIRADA'\n    AND $2 IN ('confirmar_leitura','confirmar_retirada')\n    AND e.codigo_retirada=$4 AND $3 ~ '^55[0-9]{10,11}$'\n    AND (SELECT count(*) FROM public.moradores m\n      WHERE m.ativo=true AND CASE WHEN length(regexp_replace(m.whatsapp, '[^0-9]', '', 'g')) IN (10,11)\n  THEN '55' || regexp_replace(m.whatsapp, '[^0-9]', '', 'g')\n  ELSE regexp_replace(m.whatsapp, '[^0-9]', '', 'g') END=$3)=1\n    AND EXISTS (SELECT 1 FROM public.moradores m\n      WHERE m.ativo=true AND m.bloco=e.morador_bloco\n        AND m.andar=e.morador_andar AND m.apartamento=e.morador_apartamento\n        AND CASE WHEN length(regexp_replace(m.whatsapp, '[^0-9]', '', 'g')) IN (10,11)\n  THEN '55' || regexp_replace(m.whatsapp, '[^0-9]', '', 'g')\n  ELSE regexp_replace(m.whatsapp, '[^0-9]', '', 'g') END=$3)\n  RETURNING e.protocolo,e.codigo_retirada,e.status,e.destinatario_nome,\n    e.morador_bloco,e.morador_andar,e.morador_apartamento\n) SELECT * FROM atualizado;",
         "options": {
-          "queryReplacement": "={{ [\n  $('Buscar Encomenda Pendente').item.json.protocolo || '',\n  $('Parse_Encomenda_Resposta').item.json.acao || 'confirmar_leitura'\n] }}"
+          "queryReplacement": "={{ [ $('Buscar Encomenda Pendente').item.json.protocolo, $('Parse_Encomenda_Resposta').item.json.acao, $('Parse_Encomenda_Resposta').item.json.morador_whatsapp, $('Buscar Encomenda Pendente').item.json.codigo_retirada ] }}"
         }
       },
       "type": "n8n-nodes-base.postgres",
@@ -111,7 +111,7 @@
         "operation": "Send Text",
         "session": "={{ $('Parse_Encomenda_Resposta').item.json.session || 'default' }}",
         "chatId": "={{ $('Parse_Encomenda_Resposta').item.json.chat_id }}",
-        "text": "={{ \"Não encontrei nenhuma encomenda pendente de retirada para a sua unidade no momento. 📦\\n\\nSe precisar abrir um chamado ou falar com a administração, é só escrever aqui.\" }}",
+        "text": "Não foi possível identificar uma única encomenda pendente sua. Envie RETIREI seguido do código ou do protocolo da encomenda. Se não houver encomenda vinculada ao seu cadastro, procure a portaria. Nenhuma retirada foi registrada.",
         "requestOptions": {}
       },
       "type": "n8n-nodes-waha.WAHA",
@@ -1164,7 +1164,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const norm = $('Normalizar Webhook').item.json || {};\nconst payload = $('Estruturar Payload').item.json || {};\nconst morador = payload.morador || {};\nconst encomendaPayload = payload.encomenda || {};\nconst triagem = $('Agente Triagem').item.json?.output || $('Agente Triagem').item.json || {};\n\nconst textoRaw = String(\n  norm.mensagem || norm.texto || norm.text || norm.chamado_relato || ''\n).trim();\n\nconst textoNorm = textoRaw\n  .toLowerCase()\n  .normalize('NFD')\n  .replace(/[\\u0300-\\u036f]/g, '');\n\nlet acao = triagem.acao_encomenda || 'confirmar_leitura';\nif (/\\b(recebi|retirei|peguei|ja peguei)\\b/.test(textoNorm)) {\n  acao = 'confirmar_retirada';\n} else if (/\\b(ok|li|ciente)\\b/.test(textoNorm)) {\n  acao = 'confirmar_leitura';\n}\n\nreturn {\n  json: {\n    session: norm.session || 'default',\n    chat_id: norm.chat_id || '',\n    texto: textoRaw,\n    acao,\n    protocolo: encomendaPayload.protocolo || '',\n    codigo_retirada: triagem.codigo_retirada || encomendaPayload.codigo_retirada || '',\n    morador_bloco: morador.bloco || '',\n    morador_andar: morador.andar || '',\n    morador_apartamento: morador.apartamento || '',\n    morador_nome: morador.nome || '',\n    morador_whatsapp: morador.whatsapp || ''\n  }\n};"
+        "jsCode": "return (function parseResposta($) {\n  const norm = $('Normalizar Webhook').item.json || {};\n  const morador = $('Filtra Morador').item.json || {};\n  const telefone = value => {\n    const raw = String(value || '');\n    if (raw.includes('@') && !/@(?:c\\.us|s\\.whatsapp\\.net)$/.test(raw)) return '';\n    const digits = raw.split('@')[0].replace(/\\D/g, '');\n    if (/^\\d{10,11}$/.test(digits)) return '55' + digits;\n    return /^55\\d{10,11}$/.test(digits) ? digits : '';\n  };\n  const sender = /@(?:c\\.us|s\\.whatsapp\\.net)$/.test(String(norm.chat_id || ''))\n    ? telefone(norm.chat_id) : telefone(norm.chamado_responsavel_whatsapp);\n  if (!sender || morador.ativo !== true || telefone(morador.whatsapp) !== sender) {\n    throw new Error('Remetente não vinculado a um morador ativo.');\n  }\n  const texto = String(norm.mensagem || norm.texto || norm.text || norm.chamado_relato || '').trim();\n  const normalized = texto.toLowerCase().normalize('NFD').replace(/[\\u0300-\\u036f]/g, '');\n  const command = normalized.match(/^(recebi|retirei|peguei|ja peguei|ok|li|ciente|consultar|encomenda)(?:\\s+(?:(?:codigo|protocolo)\\s*[:#-]?\\s*)?([0-9]{4,10}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}))?[.!]?$/);\n  const retirada = command && ['recebi','retirei','peguei','ja peguei'].includes(command[1]);\n  return { json: {\n    session: norm.session || 'default', chat_id: norm.chat_id || '', texto,\n    acao: retirada ? 'confirmar_retirada' : 'confirmar_leitura',\n    seletor: command?.[2] || '', comando_valido: Boolean(command),\n    morador_whatsapp: sender, morador_nome: morador.nome || '',\n    morador_bloco: morador.bloco || '', morador_andar: morador.andar || '',\n    morador_apartamento: morador.apartamento || '',\n  } };\n})($);"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -1192,22 +1192,15 @@
     {
       "parameters": {
         "url": "={{ $json.contexto.media_url }}",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "X-Api-Key",
-              "value": "[REMOVED]"
-            }
-          ]
-        },
         "options": {
           "response": {
             "response": {
               "responseFormat": "file"
             }
           }
-        }
+        },
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth"
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.5,
@@ -1219,7 +1212,12 @@
       "name": "Baixar Imagem1",
       "retryOnFail": true,
       "waitBetweenTries": 2000,
-      "onError": "continueErrorOutput"
+      "onError": "continueErrorOutput",
+      "credentials": {
+        "httpHeaderAuth": {
+          "name": "WAHA Midia - configurar X-Api-Key"
+        }
+      }
     },
     {
       "parameters": {
@@ -2024,9 +2022,9 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "WITH dados_entrada AS (\n  SELECT\n    NULLIF(trim($1), '') AS bloco,\n    NULLIF(trim($2), '') AS andar,\n    NULLIF(trim($3), '') AS apartamento,\n    NULLIF(regexp_replace($4, '\\D', '', 'g'), '') AS whatsapp_digits\n),\nencomenda_encontrada AS (\n  SELECT\n    e.id,\n    e.protocolo,\n    e.codigo_retirada,\n    e.status,\n    e.destinatario_nome,\n    e.morador_bloco,\n    e.morador_andar,\n    e.morador_apartamento,\n    m.nome AS morador_nome,\n    m.whatsapp AS morador_whatsapp,\n    1 AS prioridade\n  FROM public.encomendas e\n  LEFT JOIN public.moradores m\n    ON m.bloco = e.morador_bloco\n   AND m.andar = e.morador_andar\n   AND m.apartamento = e.morador_apartamento\n  CROSS JOIN dados_entrada d\n  WHERE e.status = 'AGUARDANDO_RETIRADA'\n    AND (\n      (d.bloco IS NOT NULL AND e.morador_bloco = d.bloco AND e.morador_andar = d.andar AND e.morador_apartamento = d.apartamento)\n      OR (d.whatsapp_digits IS NOT NULL AND length(d.whatsapp_digits) >= 10 AND right(regexp_replace(COALESCE(m.whatsapp, ''), '\\D', '', 'g'), 10) = right(d.whatsapp_digits, 10))\n    )\n  ORDER BY e.data_recebimento DESC\n  LIMIT 1\n),\nfallback_lid AS (\n  SELECT\n    e.id,\n    e.protocolo,\n    e.codigo_retirada,\n    e.status,\n    e.destinatario_nome,\n    e.morador_bloco,\n    e.morador_andar,\n    e.morador_apartamento,\n    m.nome AS morador_nome,\n    m.whatsapp AS morador_whatsapp,\n    2 AS prioridade\n  FROM public.encomendas e\n  LEFT JOIN public.moradores m\n    ON m.bloco = e.morador_bloco\n   AND m.andar = e.morador_andar\n   AND m.apartamento = e.morador_apartamento\n  WHERE e.status = 'AGUARDANDO_RETIRADA'\n    AND NOT EXISTS (SELECT 1 FROM encomenda_encontrada)\n  ORDER BY e.data_recebimento DESC\n  LIMIT 1\n)\nSELECT\n  COALESCE((SELECT protocolo::text FROM encomenda_encontrada), (SELECT protocolo::text FROM fallback_lid), '') AS protocolo,\n  COALESCE((SELECT codigo_retirada FROM encomenda_encontrada), (SELECT codigo_retirada FROM fallback_lid), '') AS codigo_retirada,\n  COALESCE((SELECT status FROM encomenda_encontrada), (SELECT status FROM fallback_lid), '') AS status,\n  COALESCE((SELECT morador_bloco FROM encomenda_encontrada), (SELECT morador_bloco FROM fallback_lid), '') AS morador_bloco,\n  COALESCE((SELECT morador_andar FROM encomenda_encontrada), (SELECT morador_andar FROM fallback_lid), '') AS morador_andar,\n  COALESCE((SELECT morador_apartamento FROM encomenda_encontrada), (SELECT morador_apartamento FROM fallback_lid), '') AS morador_apartamento,\n  COALESCE((SELECT morador_nome FROM encomenda_encontrada), (SELECT morador_nome FROM fallback_lid), '') AS morador_nome,\n  COALESCE((SELECT morador_whatsapp FROM encomenda_encontrada), (SELECT morador_whatsapp FROM fallback_lid), '') AS morador_whatsapp;",
+        "query": "WITH morador_autorizado AS (\n  SELECT m.bloco, m.andar, m.apartamento\n  FROM public.moradores m\n  WHERE m.ativo = true AND CASE WHEN length(regexp_replace(m.whatsapp, '[^0-9]', '', 'g')) IN (10,11)\n  THEN '55' || regexp_replace(m.whatsapp, '[^0-9]', '', 'g')\n  ELSE regexp_replace(m.whatsapp, '[^0-9]', '', 'g') END = $1\n    AND $1 ~ '^55[0-9]{10,11}$'\n), candidatas AS (\n  SELECT e.* FROM public.encomendas e\n  JOIN morador_autorizado m ON m.bloco=e.morador_bloco\n    AND m.andar=e.morador_andar AND m.apartamento=e.morador_apartamento\n  WHERE e.status='AGUARDANDO_RETIRADA'\n    AND (SELECT count(*) FROM morador_autorizado)=1\n    AND ($2='' OR e.codigo_retirada=$2 OR e.protocolo::text=$2)\n    AND $3::boolean = true\n)\nSELECT CASE WHEN count(*)=1 THEN max(protocolo::text) ELSE '' END AS protocolo,\n  CASE WHEN count(*)=1 THEN max(codigo_retirada) ELSE '' END AS codigo_retirada,\n  count(*)::integer AS correspondencias\nFROM candidatas;",
         "options": {
-          "queryReplacement": "={{ [\n  $json.morador_bloco || '',\n  $json.morador_andar || '',\n  $json.morador_apartamento || '',\n  $json.morador_whatsapp || ''\n] }}"
+          "queryReplacement": "={{ [$json.morador_whatsapp, $json.seletor || '', $json.comando_valido === true] }}"
         }
       },
       "type": "n8n-nodes-base.postgres",
@@ -2800,7 +2798,7 @@
       ]
     }
   },
-  "active": true,
+  "active": false,
   "settings": {
     "executionOrder": "v1",
     "binaryMode": "separate"

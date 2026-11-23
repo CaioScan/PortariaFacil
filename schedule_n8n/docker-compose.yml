@@ -6,9 +6,11 @@ services:
     image: redis:7-alpine
     container_name: redis
     restart: unless-stopped
-    command: redis-server --requirepass "[REMOVED]"
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?Configure REDIS_PASSWORD no .env privado}
+    command: ["sh", "-c", "exec redis-server --requirepass \"$$REDIS_PASSWORD\""]
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
     networks:
       - automation
 
@@ -18,10 +20,10 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: default
-      POSTGRES_PASSWORD: "[REMOVED]"
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Configure POSTGRES_PASSWORD no .env privado}
       POSTGRES_DB: default
     ports:
-      - "5433:5432"
+      - "127.0.0.1:5433:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -37,7 +39,7 @@ services:
     container_name: n8n
     restart: unless-stopped
     ports:
-      - "5678:5678"
+      - "127.0.0.1:5678:5678"
     environment:
 
       TZ: America/Sao_Paulo
@@ -49,14 +51,14 @@ services:
       WEBHOOK_URL: http://n8n:5678/
 
       N8N_SECURE_COOKIE: "false"
-      N8N_LOG_LEVEL: debug
+      N8N_LOG_LEVEL: info
 
       DB_TYPE: postgresdb
       DB_POSTGRESDB_HOST: postgres
       DB_POSTGRESDB_PORT: 5432
       DB_POSTGRESDB_DATABASE: default
       DB_POSTGRESDB_USER: default
-      DB_POSTGRESDB_PASSWORD: "[REMOVED]"
+      DB_POSTGRESDB_PASSWORD: ${POSTGRES_PASSWORD:?Configure POSTGRES_PASSWORD no .env privado}
 
       N8N_COMMUNITY_PACKAGES_ALLOW_TOOL_USAGE: "true"
 
@@ -92,13 +94,13 @@ services:
     environment:
       TZ: America/Sao_Paulo
       WHATSAPP_DEFAULT_ENGINE: GOWS
-      WHATSAPP_API_KEY: "[REMOVED]"
+      WHATSAPP_API_KEY: ${WHATSAPP_API_KEY:?Configure WHATSAPP_API_KEY no .env privado}
       WHATSAPP_HOOK_URL: http://n8n:5678/
       WAHA_DASHBOARD_USERNAME: admin
-      WAHA_DASHBOARD_PASSWORD: "[REMOVED]"
+      WAHA_DASHBOARD_PASSWORD: ${WAHA_DASHBOARD_PASSWORD:?Configure WAHA_DASHBOARD_PASSWORD no .env privado}
 
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
 
     volumes:
       - waha_sessions:/app/.sessions
